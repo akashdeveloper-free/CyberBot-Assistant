@@ -51,7 +51,6 @@ async def menu_callback_handler(
 ) -> None:
     """Handle welcome, main menu, and inactive future-feature buttons."""
 
-    del context
     query = update.callback_query
     if query is None or query.data is None:
         return

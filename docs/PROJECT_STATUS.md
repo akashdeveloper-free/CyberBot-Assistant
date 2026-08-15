@@ -31,10 +31,15 @@
 
 ## Testing Result
 
-- Dependency installation: pending final verification.
-- Python import and syntax checks: pending final verification.
-- Telegram API startup check: pending final verification.
-- Interactive Telegram checks: require a live bot chat and a real test payment.
+- Dependency installation: PASS (`python-telegram-bot==22.8`, `python-dotenv==1.1.1`).
+- Python compile and import checks: PASS.
+- Application handler wiring: PASS.
+- Live Telegram startup/authentication: PASS; polling remained active until the test timeout.
+- `/start`, main menu, donation menu, fixed 10/15 Stars, custom validation, and Back
+  navigation: PASS with mocked Telegram updates.
+- Pre-checkout validation and successful-payment persistence: PASS with mocked updates.
+- SQLite schema, aggregate totals, and duplicate-charge protection: PASS.
+- A real Telegram payment was not charged during testing.
 
 ## Known Issues
 
