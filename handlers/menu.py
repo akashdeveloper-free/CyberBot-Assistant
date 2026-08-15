@@ -15,6 +15,7 @@ from keyboards.inline_buttons import (
     main_menu_keyboard,
     welcome_keyboard,
 )
+from handlers.donation import DONATION_MENU_TEXT
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +24,6 @@ MAIN_MENU_TEXT = (
     "Your Smart Digital Assistant\n\n"
     "Select an available option:"
 )
-
-DONATION_MENU_TEXT = (
-    "⭐ Donate Stars\n\n"
-    "Support CyberBot with Telegram Stars.\n"
-    "Choose a donation amount:"
-)
-
 
 async def edit_callback_screen(
     query: CallbackQuery,

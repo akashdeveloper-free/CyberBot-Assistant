@@ -18,6 +18,7 @@ class Settings:
 
     bot_token: str
     database_path: Path
+    port: int
 
 
 def load_settings() -> Settings:
@@ -32,4 +33,13 @@ def load_settings() -> Settings:
     database_path = Path(
         os.getenv("DATABASE_PATH", "database/cyberbot.sqlite3")
     ).expanduser()
-    return Settings(bot_token=bot_token, database_path=database_path)
+
+    raw_port = os.getenv("PORT", "8080").strip()
+    try:
+        port = int(raw_port)
+    except ValueError as exc:
+        raise RuntimeError("PORT must be a valid integer.") from exc
+    if not 1 <= port <= 65535:
+        raise RuntimeError("PORT must be between 1 and 65535.")
+
+    return Settings(bot_token=bot_token, database_path=database_path, port=port)

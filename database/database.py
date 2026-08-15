@@ -1,4 +1,4 @@
-"""SQLite persistence prepared for CyberBot's future user system."""
+"""SQLite persistence for users and successful Telegram Stars donations."""
 
 from __future__ import annotations
 
@@ -38,6 +38,7 @@ class Database:
                 CREATE TABLE IF NOT EXISTS donations (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
+                    username TEXT,
                     stars INTEGER NOT NULL CHECK (stars > 0),
                     payload TEXT NOT NULL,
                     telegram_charge_id TEXT NOT NULL UNIQUE,
@@ -46,6 +47,12 @@ class Database:
                 );
                 """
             )
+            donation_columns = {
+                row["name"]
+                for row in connection.execute("PRAGMA table_info(donations)")
+            }
+            if "username" not in donation_columns:
+                connection.execute("ALTER TABLE donations ADD COLUMN username TEXT")
 
     def ensure_user(self, user_id: int, username: str | None) -> None:
         """Create a user record or refresh the current username."""
@@ -87,10 +94,10 @@ class Database:
             cursor = connection.execute(
                 """
                 INSERT OR IGNORE INTO donations
-                    (user_id, stars, payload, telegram_charge_id, created_at)
-                VALUES (?, ?, ?, ?, ?)
+                    (user_id, username, stars, payload, telegram_charge_id, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (user_id, stars, payload, telegram_charge_id, created_at),
+                (user_id, username, stars, payload, telegram_charge_id, created_at),
             )
             if cursor.rowcount == 0:
                 return False
@@ -104,3 +111,11 @@ class Database:
                 (stars, user_id),
             )
             return True
+
+    def close(self) -> None:
+        """Release database resources.
+
+        Connections are short-lived and context-managed, so there is no shared
+        connection to close. This method gives the application lifecycle an
+        explicit cleanup hook and keeps the repository easy to extend later.
+        """

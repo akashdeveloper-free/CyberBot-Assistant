@@ -12,11 +12,10 @@ def welcome_keyboard() -> InlineKeyboardMarkup:
 
 
 def main_menu_keyboard() -> InlineKeyboardMarkup:
-    """Main menu with future options kept visible but inactive."""
+    """Main keyboard with the four available assistant tools."""
 
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("⭐ Donate Stars", callback_data="menu:donate")],
             [
                 InlineKeyboardButton(
                     "🎬 Video Downloader",
@@ -37,11 +36,10 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(
-                    "⚙ Settings",
+                    "⚙️ Settings",
                     callback_data="future:settings",
                 )
             ],
-            [InlineKeyboardButton("⬅️ Back", callback_data="menu:welcome")],
         ]
     )
 
@@ -52,7 +50,8 @@ def donation_menu_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("⭐ 10 Stars", callback_data="donate:10")],
-            [InlineKeyboardButton("⭐ 15 Stars", callback_data="donate:15")],
+            [InlineKeyboardButton("⭐ 50 Stars", callback_data="donate:50")],
+            [InlineKeyboardButton("⭐ 100 Stars", callback_data="donate:100")],
             [
                 InlineKeyboardButton(
                     "✏ Custom Stars Amount",

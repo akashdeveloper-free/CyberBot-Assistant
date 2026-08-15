@@ -11,9 +11,11 @@ Completed
 - Created a modular Telegram bot foundation.
 - Added `/start` welcome flow and inline main menu.
 - Added working main menu, donation menu, custom input, and back navigation.
-- Implemented Telegram Stars invoices for 10, 15, and custom positive amounts.
+- Implemented Telegram Stars invoices for 10, 50, 100, and custom positive amounts.
 - Added `PreCheckoutQueryHandler` validation for `XTR` donations.
 - Added successful payment confirmation and duplicate charge protection.
+- Added Render health endpoints and an explicit graceful polling lifecycle.
+- Added Telegram Menu Button commands for start, donate, help, and settings.
 - Prepared a SQLite schema for users and donations.
 - Added environment-based configuration, logging, error handling, and documentation.
 
@@ -22,9 +24,11 @@ Completed
 - `main.py`
 - `config/settings.py`
 - `handlers/start.py`
+- `handlers/commands.py`
 - `handlers/menu.py`
 - `handlers/donation.py`
 - `keyboards/inline_buttons.py`
+- `services/health_server.py`
 - `services/telegram_stars.py`
 - `database/database.py`
 - `utils/logger.py`
@@ -39,16 +43,16 @@ Completed
 - Python compile and import checks: PASS.
 - Application handler wiring: PASS.
 - Live Telegram startup/authentication: PASS; polling remained active until the test timeout.
-- `/start`, main menu, donation menu, fixed 10/15 Stars, custom validation, and Back
+- `/start`, main menu, donation menu, fixed 10/50/100 Stars, custom validation, and Back
   navigation: PASS with mocked Telegram updates.
 - Pre-checkout validation and successful-payment persistence: PASS with mocked updates.
 - SQLite schema, aggregate totals, and duplicate-charge protection: PASS.
 - A real Telegram payment was not charged during testing.
 
-## Known Issues
+## Verification Notes
 
-- Telegram payment tests cannot be fully simulated locally without Telegram's
-  servers and a user-approved payment flow.
+- A real Telegram payment cannot be charged locally without Telegram's servers and a
+  user-approved payment flow.
 - Future menu buttons intentionally show an inactive-feature message.
 
 ## Next Development Phase

@@ -8,12 +8,15 @@ monolith.
 ## Current features
 
 - `/start` welcome screen for CyberBot.
-- Inline main menu with working navigation and back buttons.
-- Telegram Stars donation options for 10 Stars, 15 Stars, and a custom amount.
+- Inline main menu for Video Downloader, File Tools, Security Tools, and Settings.
+- Telegram Menu Button commands for `/start`, `/donate`, `/help`, and `/settings`.
+- Telegram Stars donation options for 10 Stars, 50 Stars, 100 Stars, and a custom amount.
 - Custom amount validation that accepts positive whole numbers only.
 - Telegram Stars invoices using `currency="XTR"` and an empty `provider_token`.
 - Pre-checkout validation with `PreCheckoutQueryHandler`.
 - Successful payment handling with duplicate-charge protection.
+- Render-compatible `/` and `/health` endpoints running beside Telegram polling.
+- Graceful SIGTERM and SIGINT shutdown for the polling updater and application.
 - SQLite database preparation for future user accounts and usage metrics.
 - Environment-based configuration and structured application logging.
 
@@ -48,6 +51,7 @@ named `BOT_TOKEN`; never put the real value in source code, documentation, or Gi
 Optional variables:
 
 - `DATABASE_PATH` — SQLite path; defaults to `database/cyberbot.sqlite3`.
+- `PORT` — HTTP health server port; Render supplies this automatically.
 - `LOG_LEVEL` — logging level; defaults to `INFO`.
 
 ## Run
@@ -57,8 +61,9 @@ python main.py
 ```
 
 The bot uses long polling. Send `/start` in Telegram, open the main menu, choose
-**Donate Stars**, and select a fixed or custom amount. Telegram displays the invoice
-and handles the payment securely.
+`/donate` from Telegram's Menu Button, and select a fixed or custom amount. Telegram
+displays the invoice and handles the payment securely. Render uses `render.yaml` and
+checks `/health`.
 
 ## Project structure
 
@@ -66,9 +71,11 @@ and handles the payment securely.
 main.py
 config/settings.py
 handlers/start.py
+handlers/commands.py
 handlers/menu.py
 handlers/donation.py
 keyboards/inline_buttons.py
+services/health_server.py
 services/telegram_stars.py
 database/database.py
 utils/logger.py

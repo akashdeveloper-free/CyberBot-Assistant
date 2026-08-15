@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from telegram import CallbackQuery, Update
+from telegram.error import TelegramError
 from telegram.ext import ContextTypes
 
 from database.database import Database
@@ -28,12 +29,15 @@ MIN_STARS = 1
 MAX_STARS = 2_147_483_647
 
 CUSTOM_AMOUNT_PROMPT = (
-    "✏️ Enter Custom Stars Amount\n\n"
-    "Please type the number of Stars you want to donate.\n\n"
+    "✏️ Custom Stars Amount\n\n"
+    "Send Stars amount\n\n"
     "Example:\n"
-    "20\n"
-    "50\n"
-    "100"
+    "25"
+)
+DONATION_MENU_TEXT = (
+    "⭐ Donate Stars\n\n"
+    "Support CyberBot with Telegram Stars.\n"
+    "Choose a donation amount:"
 )
 
 
@@ -67,9 +71,7 @@ async def donation_callback_handler(
         context.user_data.pop(WAITING_FOR_CUSTOM_STARS, None)
         context.user_data.pop(PENDING_DONATION_AMOUNT, None)
         await query.edit_message_text(
-            "⭐ Donate Stars\n\n"
-            "Support CyberBot with Telegram Stars.\n"
-            "Choose a donation amount:",
+            DONATION_MENU_TEXT,
             reply_markup=donation_menu_keyboard(),
         )
         return
@@ -131,19 +133,42 @@ async def _send_invoice_from_callback(
     chat = query.message.chat
     payload = build_donation_payload(chat.id, amount)
 
+    try:
+        await create_invoice(
+            bot=context.bot,
+            chat_id=chat.id,
+            stars=amount,
+            payload=payload,
+        )
+    except TelegramError:
+        logger.exception("Could not create Telegram Stars invoice.")
+        await query.edit_message_text(
+            "We could not create the payment request. Please try again.",
+            reply_markup=donation_menu_keyboard(),
+        )
+        return
+
     await query.edit_message_text(
         f"⭐ {amount} Stars donation\n\n"
         "Your secure Telegram payment request is below.",
         reply_markup=back_to_donation_keyboard(),
     )
-
-    await create_invoice(
-        bot=context.bot,
-        chat_id=chat.id,
-        stars=amount,
-        payload=payload,
-    )
     context.user_data.pop(PENDING_DONATION_AMOUNT, None)
+
+
+async def donate_command_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """Open the donation menu from Telegram's command menu."""
+
+    del context
+    message = update.effective_message
+    if message is not None:
+        await message.reply_text(
+            DONATION_MENU_TEXT,
+            reply_markup=donation_menu_keyboard(),
+        )
 
 
 async def custom_amount_message_handler(
@@ -189,16 +214,25 @@ async def custom_amount_message_handler(
         _database(context).ensure_user(user.id, user.username)
 
     payload = build_donation_payload(message.chat_id, amount)
+    try:
+        await create_invoice(
+            bot=context.bot,
+            chat_id=message.chat_id,
+            stars=amount,
+            payload=payload,
+        )
+    except TelegramError:
+        logger.exception("Could not create custom Telegram Stars invoice.")
+        await message.reply_text(
+            "We could not create the payment request. Please try again.",
+            reply_markup=donation_menu_keyboard(),
+        )
+        return
+
     await message.reply_text(
         f"⭐ {amount} Stars donation\n\n"
         "Your secure Telegram payment request is below.",
         reply_markup=back_to_donation_keyboard(),
-    )
-    await create_invoice(
-        bot=context.bot,
-        chat_id=message.chat_id,
-        stars=amount,
-        payload=payload,
     )
     context.user_data.pop(WAITING_FOR_CUSTOM_STARS, None)
 
@@ -254,7 +288,5 @@ async def successful_payment_handler(
         return
 
     await message.reply_text(
-        "🎉 Thank You!\n\n"
-        "Your donation was successful.\n\n"
-        f"⭐ Amount: {payment.total_amount} Stars",
+        "✅ Payment successful. Thank you for supporting CyberBot!"
     )

@@ -47,4 +47,13 @@ def validate_pre_checkout(
         return False, "The donation amount must be at least 1 Star."
     if not invoice_payload.startswith(DONATION_PAYLOAD_PREFIX):
         return False, "This payment request is no longer valid."
+    payload_parts = invoice_payload.split(":")
+    if len(payload_parts) != 4:
+        return False, "This payment request is no longer valid."
+    try:
+        payload_amount = int(payload_parts[-1])
+    except ValueError:
+        return False, "This payment request is no longer valid."
+    if payload_amount != total_amount:
+        return False, "The payment amount no longer matches this request."
     return True, None
