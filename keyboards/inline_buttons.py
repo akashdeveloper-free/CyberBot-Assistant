@@ -64,6 +64,22 @@ def donation_menu_keyboard() -> InlineKeyboardMarkup:
     )
 
 
+def donation_confirmation_keyboard() -> InlineKeyboardMarkup:
+    """Confirm a selected amount before creating the invoice."""
+
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "Continue Payment",
+                    callback_data="donate:continue",
+                )
+            ],
+            [InlineKeyboardButton("⬅️ Back", callback_data="menu:donate")],
+        ]
+    )
+
+
 def back_to_donation_keyboard() -> InlineKeyboardMarkup:
     """Back navigation from custom input and invoice preparation screens."""
 

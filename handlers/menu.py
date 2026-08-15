@@ -58,17 +58,20 @@ async def menu_callback_handler(
     await query.answer()
 
     if query.data == "menu:main":
-        context.user_data.pop("awaiting_custom_stars", None)
+        context.user_data.pop("WAITING_FOR_CUSTOM_STARS", None)
+        context.user_data.pop("PENDING_DONATION_AMOUNT", None)
         await edit_callback_screen(query, MAIN_MENU_TEXT, main_menu_keyboard())
         return
 
     if query.data == "menu:welcome":
-        context.user_data.pop("awaiting_custom_stars", None)
+        context.user_data.pop("WAITING_FOR_CUSTOM_STARS", None)
+        context.user_data.pop("PENDING_DONATION_AMOUNT", None)
         await edit_callback_screen(query, WELCOME_TEXT, welcome_keyboard())
         return
 
     if query.data == "menu:donate":
-        context.user_data.pop("awaiting_custom_stars", None)
+        context.user_data.pop("WAITING_FOR_CUSTOM_STARS", None)
+        context.user_data.pop("PENDING_DONATION_AMOUNT", None)
         await edit_callback_screen(
             query,
             DONATION_MENU_TEXT,

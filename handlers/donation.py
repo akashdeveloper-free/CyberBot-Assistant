@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from uuid import uuid4
 
 from telegram import CallbackQuery, Update
 from telegram.ext import ContextTypes
@@ -11,10 +10,10 @@ from telegram.ext import ContextTypes
 from database.database import Database
 from keyboards.inline_buttons import (
     back_to_donation_keyboard,
+    donation_confirmation_keyboard,
     donation_menu_keyboard,
 )
 from services.telegram_stars import (
-    DONATION_CURRENCY,
     DONATION_PAYLOAD_PREFIX,
     build_donation_payload,
     create_invoice,
@@ -23,9 +22,19 @@ from services.telegram_stars import (
 
 logger = logging.getLogger(__name__)
 
-CUSTOM_AMOUNT_KEY = "awaiting_custom_stars"
+WAITING_FOR_CUSTOM_STARS = "WAITING_FOR_CUSTOM_STARS"
+PENDING_DONATION_AMOUNT = "PENDING_DONATION_AMOUNT"
 MIN_STARS = 1
 MAX_STARS = 2_147_483_647
+
+CUSTOM_AMOUNT_PROMPT = (
+    "✏️ Enter Custom Stars Amount\n\n"
+    "Please type the number of Stars you want to donate.\n\n"
+    "Example:\n"
+    "20\n"
+    "50\n"
+    "100"
+)
 
 
 def _database(context: ContextTypes.DEFAULT_TYPE) -> Database:
@@ -46,17 +55,17 @@ async def donation_callback_handler(
     action = query.data.split(":", maxsplit=1)[1]
 
     if action == "custom":
-        context.user_data[CUSTOM_AMOUNT_KEY] = True
+        context.user_data.pop(PENDING_DONATION_AMOUNT, None)
+        context.user_data[WAITING_FOR_CUSTOM_STARS] = True
         await query.edit_message_text(
-            "✏ Custom Stars Amount\n\n"
-            "Send a whole number of Stars (1 or more).\n"
-            "You can use the button below to return without paying.",
+            CUSTOM_AMOUNT_PROMPT,
             reply_markup=back_to_donation_keyboard(),
         )
         return
 
     if action == "back":
-        context.user_data.pop(CUSTOM_AMOUNT_KEY, None)
+        context.user_data.pop(WAITING_FOR_CUSTOM_STARS, None)
+        context.user_data.pop(PENDING_DONATION_AMOUNT, None)
         await query.edit_message_text(
             "⭐ Donate Stars\n\n"
             "Support CyberBot with Telegram Stars.\n"
@@ -65,13 +74,40 @@ async def donation_callback_handler(
         )
         return
 
+    if action == "continue":
+        amount = context.user_data.get(PENDING_DONATION_AMOUNT)
+        if not isinstance(amount, int):
+            await query.edit_message_text(
+                "No donation amount is waiting for confirmation.\n\n"
+                "Please choose an amount again.",
+                reply_markup=donation_menu_keyboard(),
+            )
+            return
+
+        await _send_invoice_from_callback(query, context, amount)
+        return
+
     try:
         amount = int(action)
     except ValueError:
         logger.warning("Unexpected donation callback data: %s", query.data)
         return
 
-    await _send_invoice_from_callback(query, context, amount)
+    if amount < MIN_STARS or amount > MAX_STARS:
+        await query.edit_message_text(
+            "Please choose a valid Stars amount.",
+            reply_markup=donation_menu_keyboard(),
+        )
+        return
+
+    context.user_data.pop(WAITING_FOR_CUSTOM_STARS, None)
+    context.user_data[PENDING_DONATION_AMOUNT] = amount
+    await query.edit_message_text(
+        "⭐ CyberBot Donation\n\n"
+        "You selected:\n"
+        f"{amount} Telegram Stars",
+        reply_markup=donation_confirmation_keyboard(),
+    )
 
 
 async def _send_invoice_from_callback(
@@ -88,7 +124,6 @@ async def _send_invoice_from_callback(
         )
         return
 
-    context.user_data.pop(CUSTOM_AMOUNT_KEY, None)
     if query.message is None:
         logger.warning("Donation callback did not contain a message.")
         return
@@ -108,6 +143,7 @@ async def _send_invoice_from_callback(
         stars=amount,
         payload=payload,
     )
+    context.user_data.pop(PENDING_DONATION_AMOUNT, None)
 
 
 async def custom_amount_message_handler(
@@ -116,7 +152,7 @@ async def custom_amount_message_handler(
 ) -> None:
     """Validate custom Stars input and send an invoice for valid input."""
 
-    if not context.user_data.get(CUSTOM_AMOUNT_KEY):
+    if not context.user_data.get(WAITING_FOR_CUSTOM_STARS):
         return
 
     message = update.effective_message
@@ -148,7 +184,6 @@ async def custom_amount_message_handler(
         )
         return
 
-    context.user_data.pop(CUSTOM_AMOUNT_KEY, None)
     user = update.effective_user
     if user is not None:
         _database(context).ensure_user(user.id, user.username)
@@ -165,6 +200,7 @@ async def custom_amount_message_handler(
         stars=amount,
         payload=payload,
     )
+    context.user_data.pop(WAITING_FOR_CUSTOM_STARS, None)
 
 
 async def pre_checkout_handler(
