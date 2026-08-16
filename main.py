@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import signal
+from threading import Lock
 
 from telegram import BotCommand, MenuButtonCommands, Update
-from telegram.error import InvalidToken
+from telegram.error import Conflict, InvalidToken
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -31,7 +32,54 @@ from handlers.menu import menu_callback_handler
 from handlers.menu import reply_menu_handler
 from handlers.start import start_handler
 from services.health_server import HealthServer
+from services.polling_lock import (
+    PollingAlreadyRunningError,
+    PollingInstanceLock,
+)
 from utils.logger import logger
+
+
+_polling_run_guard = Lock()
+_polling_run_active = False
+
+
+def _claim_polling_run() -> None:
+    """Prevent two polling lifecycles from sharing one process."""
+
+    global _polling_run_active
+    with _polling_run_guard:
+        if _polling_run_active:
+            raise RuntimeError("NovaBot polling has already been started in this process.")
+        _polling_run_active = True
+
+
+def _release_polling_run() -> None:
+    """Allow a fully shut down process lifecycle to be tested or restarted."""
+
+    global _polling_run_active
+    with _polling_run_guard:
+        _polling_run_active = False
+
+
+def _polling_error_callback(
+    stop_event: asyncio.Event,
+    conflict_event: asyncio.Event,
+):
+    """Stop cleanly when Telegram reports another active getUpdates owner."""
+
+    def handle(error: Exception) -> None:
+        if isinstance(error, Conflict):
+            logger.error(
+                "Telegram rejected polling because another process owns getUpdates. "
+                "Stopping this instance for a clean handoff."
+            )
+            conflict_event.set()
+            stop_event.set()
+            return
+
+        logger.error("Telegram polling error: %r", error, exc_info=error)
+
+    return handle
 
 
 async def error_handler(
@@ -131,67 +179,91 @@ async def run_application(
     application: Application,
     health_server: HealthServer,
 ) -> None:
-    """Run exactly one polling instance with explicit shutdown ordering."""
+    """Run one guarded polling instance with explicit shutdown ordering."""
 
+    _claim_polling_run()
     stop_event = asyncio.Event()
+    conflict_event = asyncio.Event()
     loop = asyncio.get_running_loop()
     signal_handlers_installed = False
-    for signum in (signal.SIGTERM, signal.SIGINT):
-        try:
-            loop.add_signal_handler(signum, stop_event.set)
-            signal_handlers_installed = True
-        except (NotImplementedError, RuntimeError):
-            logger.warning("Could not install handler for signal %s.", signum)
-
     initialized = False
-    started = False
-    polling = False
     updater = application.updater
-    if updater is None:
-        raise RuntimeError("Telegram updater is not available.")
 
     try:
+        if updater is None:
+            raise RuntimeError("Telegram updater is not available.")
+        if application.running or updater.running:
+            raise RuntimeError("NovaBot application or polling is already running.")
+
+        for signum in (signal.SIGTERM, signal.SIGINT):
+            try:
+                loop.add_signal_handler(signum, stop_event.set)
+                signal_handlers_installed = True
+            except (NotImplementedError, RuntimeError):
+                logger.warning("Could not install handler for signal %s.", signum)
+
         await application.initialize()
         initialized = True
         if application.post_init is not None:
             await application.post_init(application)
+        await application.bot.delete_webhook(drop_pending_updates=False)
+        logger.info("Telegram webhook cleared before polling.")
         await application.start()
-        started = True
         await updater.start_polling(
             allowed_updates=Update.ALL_TYPES,
             drop_pending_updates=False,
             bootstrap_retries=-1,
+            error_callback=_polling_error_callback(stop_event, conflict_event),
         )
-        polling = True
         logger.info("NovaBot polling is active.")
         await stop_event.wait()
+        if conflict_event.is_set():
+            raise RuntimeError(
+                "Telegram polling stopped because another process owns getUpdates."
+            )
     finally:
-        if polling and updater.running:
-            logger.info("Stopping Telegram polling.")
-            await updater.stop()
-        if started:
-            await application.stop()
-        if initialized:
-            if application.post_shutdown is not None:
-                await application.post_shutdown(application)
-            await application.shutdown()
-        if signal_handlers_installed:
-            for signum in (signal.SIGTERM, signal.SIGINT):
-                loop.remove_signal_handler(signum)
-        health_server.stop()
+        try:
+            if updater is not None and updater.running:
+                logger.info("Stopping Telegram polling.")
+                await updater.stop()
+        finally:
+            try:
+                if application.running:
+                    await application.stop()
+            finally:
+                try:
+                    if initialized:
+                        try:
+                            if application.post_shutdown is not None:
+                                await application.post_shutdown(application)
+                        finally:
+                            await application.shutdown()
+                finally:
+                    if signal_handlers_installed:
+                        for signum in (signal.SIGTERM, signal.SIGINT):
+                            loop.remove_signal_handler(signum)
+                    health_server.stop()
+                    _release_polling_run()
 
 
 def main() -> None:
     """Start the HTTP health server and Telegram long polling together."""
 
     health_server: HealthServer | None = None
+    polling_lock = PollingInstanceLock()
     try:
         settings = load_settings()
+        polling_lock.acquire()
         application = build_application(settings)
         health_server = HealthServer(settings.port)
         health_server.start()
         logger.info("NovaBot health server is listening on port %s.", settings.port)
         asyncio.run(run_application(application, health_server))
+    except PollingAlreadyRunningError as exc:
+        logger.error(
+            "A second NovaBot process was refused because polling is already active."
+        )
+        raise RuntimeError("Another NovaBot polling process is already running.") from exc
     except InvalidToken:
         logger.error(
             "NovaBot could not authenticate with Telegram. "
@@ -206,6 +278,7 @@ def main() -> None:
     finally:
         if health_server is not None:
             health_server.stop()
+        polling_lock.release()
 
 
 if __name__ == "__main__":

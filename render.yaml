@@ -2,6 +2,7 @@ services:
   - type: web
     name: cyberbot-assistant
     runtime: python
+    numInstances: 1
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    startCommand: exec python main.py
     healthCheckPath: /health
