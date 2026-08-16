@@ -11,6 +11,7 @@ from telegram.ext import ContextTypes
 from handlers.commands import help_handler, settings_handler
 from handlers.donation import DONATION_MENU_TEXT
 from handlers.donation import donate_command_handler
+from handlers.video_downloader import video_downloader_start_handler
 from keyboards.inline_buttons import back_to_main_keyboard, donation_menu_keyboard
 from keyboards.reply_keyboard import (
     DONATE_STARS_BUTTON,
@@ -103,6 +104,9 @@ async def reply_menu_handler(
         return
     if message.text == SETTINGS_BUTTON:
         await settings_handler(update, context)
+        return
+    if message.text == VIDEO_DOWNLOADER_BUTTON:
+        await video_downloader_start_handler(update, context)
         return
 
     feature_names = {

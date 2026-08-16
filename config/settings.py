@@ -8,6 +8,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from services.video_downloader.config import VideoDownloaderConfig
 
 load_dotenv()
 
@@ -19,6 +20,7 @@ class Settings:
     bot_token: str
     database_path: Path
     port: int
+    video_downloader: VideoDownloaderConfig
 
 
 def load_settings() -> Settings:
@@ -42,4 +44,9 @@ def load_settings() -> Settings:
     if not 1 <= port <= 65535:
         raise RuntimeError("PORT must be between 1 and 65535.")
 
-    return Settings(bot_token=bot_token, database_path=database_path, port=port)
+    return Settings(
+        bot_token=bot_token,
+        database_path=database_path,
+        port=port,
+        video_downloader=VideoDownloaderConfig.from_environment(),
+    )

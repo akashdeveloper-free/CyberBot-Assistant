@@ -42,6 +42,20 @@ for user-facing flows and isolated temporary SQLite databases. It covers:
   health-server cleanup, and health endpoint responses.
 - Menu routing and future-feature back navigation.
 
+## Video downloader
+
+- The Video Downloader main-menu entry is implemented as an isolated handler
+  and service tree; the other future utility buttons remain unchanged.
+- The flow is platform selection → URL validation/SSRF checks → metadata →
+  quality/format → processing → temporary Worker link.
+- YouTube, TikTok, Facebook, and Any Link option contracts are provider-driven.
+  Cobalt is optional and configuration-only; yt-dlp is metadata/format
+  detection only unless its bounded direct fallback is explicitly enabled.
+- 4K uses the existing XTR Stars settings and a separate downloader payload,
+  with `Pay ⭐5` and Back confirmation before delivery.
+- No downloader media bytes or history are written to SQLite or Render local
+  disk. See `docs/VIDEO_DOWNLOADER.md` for Worker and environment setup.
+
 A real Telegram payment is not charged by the regression suite. Live Telegram
 authentication and payment approval require Telegram servers and a user-approved
 flow, so they remain deployment verification steps rather than local tests.

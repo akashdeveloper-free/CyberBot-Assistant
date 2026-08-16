@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
+    "cryptography>=45.0.0,<47",
     "python-dotenv==1.1.1",
     "python-telegram-bot==22.8",
     "Flask==3.1.1",

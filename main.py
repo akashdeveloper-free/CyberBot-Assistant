@@ -22,20 +22,24 @@ from config.settings import Settings, load_settings
 from database.database import Database
 from handlers.commands import help_handler, settings_handler
 from handlers.donation import (
-    custom_amount_message_handler,
     donate_command_handler,
     donation_callback_handler,
-    pre_checkout_handler,
-    successful_payment_handler,
 )
 from handlers.menu import menu_callback_handler
 from handlers.menu import reply_menu_handler
 from handlers.start import start_handler
+from handlers.video_downloader import (
+    video_downloader_callback_handler,
+    video_downloader_text_handler,
+    video_pre_checkout_handler,
+    video_successful_payment_router,
+)
 from services.health_server import HealthServer
 from services.polling_lock import (
     PollingAlreadyRunningError,
     PollingInstanceLock,
 )
+from services.video_downloader import VideoDownloaderService
 from utils.logger import logger
 
 
@@ -144,6 +148,9 @@ def build_application(settings: Settings) -> Application:
         .build()
     )
     application.bot_data["database"] = database
+    application.bot_data["video_downloader"] = VideoDownloaderService(
+        settings.video_downloader
+    )
 
     application.add_handler(CommandHandler("start", start_handler))
     application.add_handler(CommandHandler("donate", donate_command_handler))
@@ -153,11 +160,14 @@ def build_application(settings: Settings) -> Application:
         CallbackQueryHandler(menu_callback_handler, pattern=r"^(menu:|future:)")
     )
     application.add_handler(
+        CallbackQueryHandler(video_downloader_callback_handler, pattern=r"^video:")
+    )
+    application.add_handler(
         CallbackQueryHandler(donation_callback_handler, pattern=r"^donate:")
     )
-    application.add_handler(PreCheckoutQueryHandler(pre_checkout_handler))
+    application.add_handler(PreCheckoutQueryHandler(video_pre_checkout_handler))
     application.add_handler(
-        MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_handler)
+        MessageHandler(filters.SUCCESSFUL_PAYMENT, video_successful_payment_router)
     )
     application.add_handler(
         MessageHandler(
@@ -169,7 +179,7 @@ def build_application(settings: Settings) -> Application:
         )
     )
     application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, custom_amount_message_handler)
+        MessageHandler(filters.TEXT & ~filters.COMMAND, video_downloader_text_handler)
     )
     application.add_error_handler(error_handler)
     return application
