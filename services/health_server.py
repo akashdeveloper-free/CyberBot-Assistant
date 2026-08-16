@@ -15,11 +15,11 @@ def create_health_app() -> Flask:
 
     @app.get("/")
     def root() -> str:
-        return "CyberBot is running"
+        return "NovaBot is running"
 
     @app.get("/health")
     def health() -> tuple[object, int]:
-        return jsonify({"status": "ok", "service": "CyberBot"}), 200
+        return jsonify({"status": "ok", "service": "NovaBot"}), 200
 
     return app
 

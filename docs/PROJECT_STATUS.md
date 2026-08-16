@@ -1,6 +1,6 @@
-# CyberBot Project Status
+# NovaBot Project Status
 
-**Project:** CyberBot
+**Project:** NovaBot
 
 ## GitHub Push Status
 

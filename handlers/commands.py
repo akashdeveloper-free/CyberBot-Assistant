@@ -5,7 +5,7 @@ from __future__ import annotations
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from keyboards.inline_buttons import main_menu_keyboard
+from keyboards.reply_keyboard import main_reply_keyboard
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -15,11 +15,13 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     message = update.effective_message
     if message is not None:
         await message.reply_text(
-            "CyberBot help\n\n"
-            "/start — open CyberBot\n"
-            "/donate — support CyberBot with Telegram Stars\n"
+            "ℹ️ NovaBot Help\n\n"
+            "/start — open NovaBot\n"
+            "/donate — support NovaBot with Telegram Stars\n"
             "/help — show this help\n"
-            "/settings — open settings"
+            "/settings — open settings\n\n"
+            "You can also use the persistent keyboard below to navigate.",
+            reply_markup=main_reply_keyboard(),
         )
 
 
@@ -33,6 +35,6 @@ async def settings_handler(
     message = update.effective_message
     if message is not None:
         await message.reply_text(
-            "⚙️ Settings\n\nSettings are ready for the next CyberBot update.",
-            reply_markup=main_menu_keyboard(),
+            "⚙️ Settings\n\nSettings are ready for the next NovaBot update.",
+            reply_markup=main_reply_keyboard(),
         )

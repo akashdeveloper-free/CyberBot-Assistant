@@ -36,7 +36,7 @@ CUSTOM_AMOUNT_PROMPT = (
 )
 DONATION_MENU_TEXT = (
     "⭐ Donate Stars\n\n"
-    "Support CyberBot with Telegram Stars.\n"
+    "Support NovaBot with Telegram Stars.\n"
     "Choose a donation amount:"
 )
 
@@ -105,7 +105,7 @@ async def donation_callback_handler(
     context.user_data.pop(WAITING_FOR_CUSTOM_STARS, None)
     context.user_data[PENDING_DONATION_AMOUNT] = amount
     await query.edit_message_text(
-        "⭐ CyberBot Donation\n\n"
+        "⭐ NovaBot Donation\n\n"
         "You selected:\n"
         f"{amount} Telegram Stars",
         reply_markup=donation_confirmation_keyboard(),
@@ -241,7 +241,7 @@ async def pre_checkout_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """Approve only valid CyberBot Telegram Stars pre-checkout requests."""
+    """Approve only valid NovaBot Telegram Stars pre-checkout requests."""
 
     del context
     query = update.pre_checkout_query
@@ -288,5 +288,5 @@ async def successful_payment_handler(
         return
 
     await message.reply_text(
-        "✅ Payment successful. Thank you for supporting CyberBot!"
+        "✅ Payment successful. Thank you for supporting NovaBot!"
     )

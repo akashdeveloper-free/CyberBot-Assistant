@@ -25,8 +25,8 @@ async def create_invoice(
 
     await bot.send_invoice(
         chat_id=chat_id,
-        title="CyberBot Donation",
-        description=f"Support CyberBot with {stars} Telegram Stars.",
+        title="NovaBot Donation",
+        description=f"Support NovaBot with {stars} Telegram Stars.",
         payload=payload,
         provider_token=PROVIDER_TOKEN,
         currency=DONATION_CURRENCY,
@@ -39,7 +39,7 @@ def validate_pre_checkout(
     total_amount: int,
     invoice_payload: str,
 ) -> tuple[bool, str | None]:
-    """Validate the fields that must match a CyberBot Stars donation."""
+    """Validate the fields that must match a NovaBot Stars donation."""
 
     if currency != DONATION_CURRENCY:
         return False, "This payment uses an unsupported currency."

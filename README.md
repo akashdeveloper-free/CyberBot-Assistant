@@ -1,14 +1,14 @@
-# CyberBot — Your Smart Digital Assistant
+# NovaBot — Your Smart Digital Assistant
 
-CyberBot is a modular Telegram bot foundation for an all-in-one digital assistant. The
+NovaBot is a modular Telegram bot foundation for an all-in-one digital assistant. The
 first production feature is a secure Telegram Stars donation flow. Future modules can
 be added as independent handlers and services without turning `main.py` into a
 monolith.
 
 ## Current features
 
-- `/start` welcome screen for CyberBot.
-- Inline main menu for Video Downloader, File Tools, Security Tools, and Settings.
+- `/start` welcome screen with a persistent Reply Keyboard for NovaBot.
+- Inline submenus for Video Downloader, File Tools, Security Tools, and Settings.
 - Telegram Menu Button commands for `/start`, `/donate`, `/help`, and `/settings`.
 - Telegram Stars donation options for 10 Stars, 50 Stars, 100 Stars, and a custom amount.
 - Custom amount validation that accepts positive whole numbers only.
@@ -60,8 +60,8 @@ Optional variables:
 python main.py
 ```
 
-The bot uses long polling. Send `/start` in Telegram, open the main menu, choose
-`/donate` from Telegram's Menu Button, and select a fixed or custom amount. Telegram
+The bot uses long polling. Send `/start` in Telegram, use the persistent main
+keyboard, and select Donate Stars or `/donate` from Telegram's Menu Button. Telegram
 displays the invoice and handles the payment securely. Render uses `render.yaml` and
 checks `/health`.
 

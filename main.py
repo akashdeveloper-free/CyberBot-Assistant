@@ -1,4 +1,4 @@
-"""CyberBot application entry point."""
+"""NovaBot application entry point."""
 
 from __future__ import annotations
 
@@ -28,6 +28,7 @@ from handlers.donation import (
     successful_payment_handler,
 )
 from handlers.menu import menu_callback_handler
+from handlers.menu import reply_menu_handler
 from handlers.start import start_handler
 from services.health_server import HealthServer
 from utils.logger import logger
@@ -65,7 +66,7 @@ async def post_init(application: Application) -> None:
 
     await application.bot.set_my_commands(
         [
-            BotCommand("start", "Open CyberBot"),
+            BotCommand("start", "Open NovaBot"),
             BotCommand("donate", "⭐ Donate Stars"),
             BotCommand("help", "Get help"),
             BotCommand("settings", "Open settings"),
@@ -111,6 +112,15 @@ def build_application(settings: Settings) -> Application:
         MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_handler)
     )
     application.add_handler(
+        MessageHandler(
+            filters.Regex(
+                r"^(?:🎬 Video Downloader|📁 File Tools|🔐 Security Tools|"
+                r"⚙️ Settings|⭐ Donate Stars|ℹ️ Help)$"
+            ),
+            reply_menu_handler,
+        )
+    )
+    application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, custom_amount_message_handler)
     )
     application.add_error_handler(error_handler)
@@ -153,7 +163,7 @@ async def run_application(
             bootstrap_retries=-1,
         )
         polling = True
-        logger.info("CyberBot polling is active.")
+        logger.info("NovaBot polling is active.")
         await stop_event.wait()
     finally:
         if polling and updater.running:
@@ -180,18 +190,18 @@ def main() -> None:
         application = build_application(settings)
         health_server = HealthServer(settings.port)
         health_server.start()
-        logger.info("CyberBot health server is listening on port %s.", settings.port)
+        logger.info("NovaBot health server is listening on port %s.", settings.port)
         asyncio.run(run_application(application, health_server))
     except InvalidToken:
         logger.error(
-            "CyberBot could not authenticate with Telegram. "
+            "NovaBot could not authenticate with Telegram. "
             "Check that BOT_TOKEN is a valid BotFather token."
         )
         raise RuntimeError("Telegram bot authentication failed.") from None
     except (RuntimeError, KeyboardInterrupt):
         raise
     except Exception:
-        logger.exception("CyberBot stopped because of an unexpected startup error.")
+        logger.exception("NovaBot stopped because of an unexpected startup error.")
         raise
     finally:
         if health_server is not None:

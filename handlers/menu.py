@@ -1,4 +1,4 @@
-"""Main menu and future-feature navigation handlers."""
+"""Reply-keyboard routing and inline submenu navigation."""
 
 from __future__ import annotations
 
@@ -8,21 +8,24 @@ from telegram import CallbackQuery, Update
 from telegram.error import BadRequest
 from telegram.ext import ContextTypes
 
-from handlers.start import WELCOME_TEXT
-from keyboards.inline_buttons import (
-    back_to_main_keyboard,
-    donation_menu_keyboard,
-    main_menu_keyboard,
-    welcome_keyboard,
-)
+from handlers.commands import help_handler, settings_handler
 from handlers.donation import DONATION_MENU_TEXT
+from handlers.donation import donate_command_handler
+from keyboards.inline_buttons import back_to_main_keyboard, donation_menu_keyboard
+from keyboards.reply_keyboard import (
+    DONATE_STARS_BUTTON,
+    FILE_TOOLS_BUTTON,
+    HELP_BUTTON,
+    SECURITY_TOOLS_BUTTON,
+    SETTINGS_BUTTON,
+    VIDEO_DOWNLOADER_BUTTON,
+)
 
 logger = logging.getLogger(__name__)
 
 MAIN_MENU_TEXT = (
-    "🤖 CyberBot — Main Menu\n\n"
-    "Your Smart Digital Assistant\n\n"
-    "Select an available option:"
+    "🤖 NovaBot — Main Menu\n"
+    "Your Smart Digital Assistant"
 )
 
 async def edit_callback_screen(
@@ -54,13 +57,13 @@ async def menu_callback_handler(
     if query.data == "menu:main":
         context.user_data.pop("WAITING_FOR_CUSTOM_STARS", None)
         context.user_data.pop("PENDING_DONATION_AMOUNT", None)
-        await edit_callback_screen(query, MAIN_MENU_TEXT, main_menu_keyboard())
+        await edit_callback_screen(query, MAIN_MENU_TEXT, None)
         return
 
     if query.data == "menu:welcome":
         context.user_data.pop("WAITING_FOR_CUSTOM_STARS", None)
         context.user_data.pop("PENDING_DONATION_AMOUNT", None)
-        await edit_callback_screen(query, WELCOME_TEXT, welcome_keyboard())
+        await edit_callback_screen(query, MAIN_MENU_TEXT, None)
         return
 
     if query.data == "menu:donate":
@@ -76,7 +79,44 @@ async def menu_callback_handler(
     if query.data.startswith("future:"):
         await edit_callback_screen(
             query,
-            "This feature is planned for a future CyberBot update.\n\n"
+            "This feature is planned for a future NovaBot update.\n\n"
             "Please choose an available option from the menu.",
             back_to_main_keyboard(),
         )
+
+
+async def reply_menu_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
+    """Route one of the six persistent main-menu buttons."""
+
+    message = update.effective_message
+    if message is None or not message.text:
+        return
+
+    if message.text == DONATE_STARS_BUTTON:
+        await donate_command_handler(update, context)
+        return
+    if message.text == HELP_BUTTON:
+        await help_handler(update, context)
+        return
+    if message.text == SETTINGS_BUTTON:
+        await settings_handler(update, context)
+        return
+
+    feature_names = {
+        VIDEO_DOWNLOADER_BUTTON: "🎬 Video Downloader",
+        FILE_TOOLS_BUTTON: "📁 File Tools",
+        SECURITY_TOOLS_BUTTON: "🔐 Security Tools",
+    }
+    feature_name = feature_names.get(message.text)
+    if feature_name is None:
+        return
+
+    await message.reply_text(
+        f"{feature_name}\n\n"
+        "This feature is planned for a future NovaBot update.\n\n"
+        "Please choose another option from the menu.",
+        reply_markup=back_to_main_keyboard(),
+    )

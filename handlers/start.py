@@ -1,4 +1,4 @@
-"""Handlers for the bot welcome screen."""
+"""Handlers for the NovaBot welcome screen."""
 
 from __future__ import annotations
 
@@ -6,13 +6,13 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from database.database import Database
-from keyboards.inline_buttons import welcome_keyboard
+from keyboards.reply_keyboard import main_reply_keyboard
 
 
 WELCOME_TEXT = (
-    "🤖 CyberBot\n\n"
+    "🤖 NovaBot — Main Menu\n"
     "Your Smart Digital Assistant\n\n"
-    "Welcome to CyberBot. Choose an option below to get started."
+    "Welcome to NovaBot. Choose an option below to get started."
 )
 
 
@@ -27,4 +27,4 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         database.ensure_user(user.id, user.username)
 
     if message is not None:
-        await message.reply_text(WELCOME_TEXT, reply_markup=welcome_keyboard())
+        await message.reply_text(WELCOME_TEXT, reply_markup=main_reply_keyboard())

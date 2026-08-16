@@ -1,47 +1,6 @@
-"""Inline keyboards for CyberBot navigation."""
+"""Inline keyboards for NovaBot submenus and actions."""
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
-
-def welcome_keyboard() -> InlineKeyboardMarkup:
-    """Keyboard for the welcome screen."""
-
-    return InlineKeyboardMarkup(
-        [[InlineKeyboardButton("Open Main Menu", callback_data="menu:main")]]
-    )
-
-
-def main_menu_keyboard() -> InlineKeyboardMarkup:
-    """Main keyboard with the four available assistant tools."""
-
-    return InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    "🎬 Video Downloader",
-                    callback_data="future:video",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "📁 File Tools",
-                    callback_data="future:file",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "🔐 Security Tools",
-                    callback_data="future:security",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "⚙️ Settings",
-                    callback_data="future:settings",
-                )
-            ],
-        ]
-    )
 
 
 def donation_menu_keyboard() -> InlineKeyboardMarkup:
