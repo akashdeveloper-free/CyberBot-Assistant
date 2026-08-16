@@ -29,7 +29,7 @@ def donation_confirmation_keyboard() -> InlineKeyboardMarkup:
         [
             [
                 InlineKeyboardButton(
-                    "Continue Payment",
+                    "⭐ Pay",
                     callback_data="donate:continue",
                 )
             ],

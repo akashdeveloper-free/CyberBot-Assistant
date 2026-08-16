@@ -175,7 +175,7 @@ async def custom_amount_message_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """Validate custom Stars input and send an invoice for valid input."""
+    """Validate custom Stars input and show the shared payment confirmation."""
 
     if not context.user_data.get(WAITING_FOR_CUSTOM_STARS):
         return
@@ -213,28 +213,14 @@ async def custom_amount_message_handler(
     if user is not None:
         _database(context).ensure_user(user.id, user.username)
 
-    payload = build_donation_payload(message.chat_id, amount)
-    try:
-        await create_invoice(
-            bot=context.bot,
-            chat_id=message.chat_id,
-            stars=amount,
-            payload=payload,
-        )
-    except TelegramError:
-        logger.exception("Could not create custom Telegram Stars invoice.")
-        await message.reply_text(
-            "We could not create the payment request. Please try again.",
-            reply_markup=donation_menu_keyboard(),
-        )
-        return
-
+    context.user_data[WAITING_FOR_CUSTOM_STARS] = False
+    context.user_data[PENDING_DONATION_AMOUNT] = amount
     await message.reply_text(
-        f"⭐ {amount} Stars donation\n\n"
-        "Your secure Telegram payment request is below.",
-        reply_markup=back_to_donation_keyboard(),
+        "⭐ NovaBot Donation\n\n"
+        "You selected:\n"
+        f"{amount} Telegram Stars",
+        reply_markup=donation_confirmation_keyboard(),
     )
-    context.user_data.pop(WAITING_FOR_CUSTOM_STARS, None)
 
 
 async def pre_checkout_handler(

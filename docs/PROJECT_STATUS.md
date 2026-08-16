@@ -2,61 +2,109 @@
 
 **Project:** NovaBot
 
-## GitHub Push Status
+## Completed features
 
-Completed
+- Modular Telegram bot foundation with environment-based settings and structured
+  logging.
+- `/start` welcome flow with a persistent reply-keyboard main menu.
+- Telegram command menu for `/start`, `/donate`, `/help`, and `/settings`.
+- Main-menu routing for Donate Stars, Help, Settings, and intentionally inactive
+  future utilities.
+- Telegram Stars donation choices for 10, 50, 100, and custom whole-number
+  amounts.
+- A shared Stars confirmation screen with `⭐ Pay` and `⬅️ Back`; custom amounts
+  use the same screen before an invoice is created.
+- Back navigation from every donation input/confirmation/payment-preparation
+  screen returns to the Donation menu through `menu:donate`.
+- Telegram Stars invoices using `currency="XTR"` and an empty provider token.
+- `PreCheckoutQueryHandler` validation for currency, positive amount, payload
+  format, and payload/amount matching.
+- Successful-payment persistence with duplicate Telegram charge protection.
+- SQLite users and donations schema with aggregate Stars and usage counters.
+- Render-compatible `/` and `/health` endpoints.
+- Guarded single-instance polling, webhook cleanup before polling, conflict
+  handling, signal handling, and ordered shutdown cleanup.
 
-## Completed
+## Tested features
 
-- Created a modular Telegram bot foundation.
-- Added `/start` welcome flow and inline main menu.
-- Added working main menu, donation menu, custom input, and back navigation.
-- Implemented Telegram Stars invoices for 10, 50, 100, and custom positive amounts.
-- Added `PreCheckoutQueryHandler` validation for `XTR` donations.
-- Added successful payment confirmation and duplicate charge protection.
-- Added Render health endpoints and an explicit graceful polling lifecycle.
-- Added Telegram Menu Button commands for start, donate, help, and settings.
-- Prepared a SQLite schema for users and donations.
-- Added environment-based configuration, logging, error handling, and documentation.
+The regression suite in `tests/test_regression.py` uses mocked Telegram objects
+for user-facing flows and isolated temporary SQLite databases. It covers:
 
-## Files Created
+- `/start` and main-menu keyboard registration.
+- Donate command and Donation menu options.
+- Fixed amount confirmation with `⭐ Pay` and `⬅️ Back`.
+- Custom amount validation, confirmation, Pay callback, and Back navigation.
+- Invalid Stars values, currency, payload, and amount-mismatch validation.
+- Invoice creation callback, successful-payment handling, and duplicate charges.
+- Database initialization, user records, donation totals, usage counts, and
+  duplicate-charge protection.
+- Polling lifecycle guards, webhook deletion, updater/application shutdown,
+  health-server cleanup, and health endpoint responses.
+- Menu routing and future-feature back navigation.
 
-- `main.py`
-- `config/settings.py`
-- `handlers/start.py`
-- `handlers/commands.py`
-- `handlers/menu.py`
-- `handlers/donation.py`
-- `keyboards/inline_buttons.py`
-- `services/health_server.py`
-- `services/telegram_stars.py`
-- `database/database.py`
-- `utils/logger.py`
-- `utils/helpers.py`
-- `README.md`
-- `requirements.txt`
-- `.env.example`
+A real Telegram payment is not charged by the regression suite. Live Telegram
+authentication and payment approval require Telegram servers and a user-approved
+flow, so they remain deployment verification steps rather than local tests.
 
-## Testing Result
+## Current architecture
 
-- Dependency installation: PASS (`python-telegram-bot==22.8`, `python-dotenv==1.1.1`).
-- Python compile and import checks: PASS.
-- Application handler wiring: PASS.
-- Live Telegram startup/authentication: PASS; polling remained active until the test timeout.
-- `/start`, main menu, donation menu, fixed 10/50/100 Stars, custom validation, and Back
-  navigation: PASS with mocked Telegram updates.
-- Pre-checkout validation and successful-payment persistence: PASS with mocked updates.
-- SQLite schema, aggregate totals, and duplicate-charge protection: PASS.
-- A real Telegram payment was not charged during testing.
+- `main.py` owns application construction, handler registration, polling
+  lifecycle, webhook cleanup, signal handling, and ordered shutdown.
+- `handlers/` contains thin Telegram update handlers. Donation navigation and
+  payment callbacks live in `handlers/donation.py`; general menu routing lives
+  in `handlers/menu.py`.
+- `keyboards/` is the source of truth for reply and inline button layouts.
+- `services/telegram_stars.py` owns Stars invoice construction and pre-checkout
+  validation. `services/health_server.py` owns the stoppable HTTP health server.
+- `services/polling_lock.py` prevents more than one process from owning polling.
+- `database/database.py` owns SQLite schema setup and persistence operations.
+- `config/settings.py` loads environment configuration; `.env.example` documents
+  names without containing secrets.
+- `utils/logger.py` and `utils/helpers.py` hold shared logging and helper logic.
 
-## Verification Notes
+## Protected core components
 
-- A real Telegram payment cannot be charged locally without Telegram's servers and a
-  user-approved payment flow.
-- Future menu buttons intentionally show an inactive-feature message.
+Future agents must preserve these contracts unless a deliberate, separately
+reviewed production change is requested:
 
-## Next Development Phase
+- Telegram Stars `XTR` currency, empty provider token, invoice payload format,
+  positive amount bounds, pre-checkout validation, and charge-id uniqueness.
+- Donation state keys and callback routes, especially `donate:continue` and
+  `menu:donate`; every Pay/confirmation screen must retain `⭐ Pay` and
+  `⬅️ Back`, with Back returning to the Donation menu.
+- SQLite users/donations schema, foreign key relationship, aggregate updates,
+  and duplicate-charge behavior.
+- Polling single-instance protection, webhook deletion before polling, conflict
+  handling, signal registration/removal, updater/application shutdown ordering,
+  and health-server stop cleanup.
+- Existing NovaBot branding, persistent menu labels, command menu, and inactive
+  future-feature behavior.
+- Secrets must come only from environment/secret storage. Never place, print,
+  commit, or document tokens, passwords, or private credentials.
 
-- Add a user profile/account module on top of the prepared database layer.
-- Add one future utility module at a time with its own handler and service.
-- Add automated unit tests for validation, database operations, and callback routing.
+## Planned features
+
+- User profile and account preferences on top of the existing users table.
+- Expanded donation history and admin analytics.
+- File Tools and Security Utilities with explicit safety boundaries.
+- AI Assistant features through a managed AI integration.
+- Premium tiers and feature access controls.
+
+## Future Video Downloader isolation
+
+Video Downloader is planned but is intentionally not implemented in this
+recovery. When work begins, isolate it in a dedicated
+`handlers/video_downloader.py` and a dedicated
+`services/video_downloader/` package, with its own tests and provider-specific
+adapters. It must not add download logic to `main.py`, `handlers/donation.py`,
+`services/telegram_stars.py`, `database/database.py`, or the polling/health
+lifecycle. Route it through the existing menu layer and shared settings/logger
+interfaces only after its safety, limits, storage, and provider behavior have
+been separately reviewed.
+
+## Source and delivery status
+
+- Source of truth: GitHub `main`.
+- This status file describes the state after the current recovery cleanup.
+- Do not mark live-payment verification as local PASS without Telegram-side
+  approval and evidence.
