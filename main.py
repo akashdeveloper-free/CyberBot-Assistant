@@ -186,7 +186,6 @@ async def run_application(
     conflict_event = asyncio.Event()
     loop = asyncio.get_running_loop()
     signal_handlers_installed = False
-    initialized = False
     updater = application.updater
 
     try:
@@ -203,18 +202,26 @@ async def run_application(
                 logger.warning("Could not install handler for signal %s.", signum)
 
         await application.initialize()
-        initialized = True
         if application.post_init is not None:
             await application.post_init(application)
         await application.bot.delete_webhook(drop_pending_updates=False)
         logger.info("Telegram webhook cleared before polling.")
         await application.start()
-        await updater.start_polling(
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=False,
-            bootstrap_retries=-1,
-            error_callback=_polling_error_callback(stop_event, conflict_event),
-        )
+        try:
+            await updater.start_polling(
+                allowed_updates=Update.ALL_TYPES,
+                drop_pending_updates=False,
+                bootstrap_retries=-1,
+                error_callback=_polling_error_callback(stop_event, conflict_event),
+            )
+        except Conflict:
+            logger.error(
+                "Telegram rejected polling because another process owns getUpdates. "
+                "Stopping this instance for a clean handoff."
+            )
+            conflict_event.set()
+            stop_event.set()
+            raise
         logger.info("NovaBot polling is active.")
         await stop_event.wait()
         if conflict_event.is_set():
@@ -232,18 +239,25 @@ async def run_application(
                     await application.stop()
             finally:
                 try:
-                    if initialized:
-                        try:
-                            if application.post_shutdown is not None:
-                                await application.post_shutdown(application)
-                        finally:
-                            await application.shutdown()
+                    try:
+                        if application.post_shutdown is not None:
+                            await application.post_shutdown(application)
+                    finally:
+                        await application.shutdown()
                 finally:
                     if signal_handlers_installed:
                         for signum in (signal.SIGTERM, signal.SIGINT):
-                            loop.remove_signal_handler(signum)
-                    health_server.stop()
-                    _release_polling_run()
+                            try:
+                                loop.remove_signal_handler(signum)
+                            except Exception:
+                                logger.exception(
+                                    "Could not remove handler for signal %s.",
+                                    signum,
+                                )
+                    try:
+                        health_server.stop()
+                    finally:
+                        _release_polling_run()
 
 
 def main() -> None:
@@ -276,9 +290,11 @@ def main() -> None:
         logger.exception("NovaBot stopped because of an unexpected startup error.")
         raise
     finally:
-        if health_server is not None:
-            health_server.stop()
-        polling_lock.release()
+        try:
+            if health_server is not None:
+                health_server.stop()
+        finally:
+            polling_lock.release()
 
 
 if __name__ == "__main__":
