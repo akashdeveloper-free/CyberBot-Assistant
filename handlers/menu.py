@@ -18,6 +18,7 @@ from keyboards.reply_keyboard import (
     HELP_BUTTON,
     SECURITY_TOOLS_BUTTON,
     SETTINGS_BUTTON,
+    VIDEO_DOWNLOADER_BUTTON,
 )
 
 logger = logging.getLogger(__name__)
@@ -106,6 +107,7 @@ async def reply_menu_handler(
     feature_names = {
         FILE_TOOLS_BUTTON: "📁 File Tools",
         SECURITY_TOOLS_BUTTON: "🔐 Security Tools",
+        VIDEO_DOWNLOADER_BUTTON: "🎬 Video Downloader",
     }
     feature_name = feature_names.get(message.text)
     if feature_name is None:
