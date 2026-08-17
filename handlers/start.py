@@ -5,7 +5,6 @@ from __future__ import annotations
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from database.database import Database
 from keyboards.reply_keyboard import main_reply_keyboard
 
 
