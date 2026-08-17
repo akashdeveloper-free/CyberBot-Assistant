@@ -24,7 +24,11 @@ from handlers.donation import (
 )
 from handlers.menu import menu_callback_handler, reply_menu_handler
 from handlers.start import WELCOME_TEXT, start_handler
-from keyboards.reply_keyboard import DONATE_STARS_BUTTON, main_reply_keyboard
+from keyboards.reply_keyboard import (
+    DONATE_STARS_BUTTON,
+    VIDEO_DOWNLOADER_BUTTON,
+    main_reply_keyboard,
+)
 from main import (
     _claim_polling_run,
     _polling_error_callback,
@@ -341,6 +345,22 @@ class MenuTests(unittest.IsolatedAsyncioTestCase):
         await reply_menu_handler(update, context)
 
         self.assertEqual(message.reply_text.call_args.args[0], DONATION_MENU_TEXT)
+
+    async def test_reply_video_downloader_routes_to_empty_placeholder(self):
+        context = _context()
+        message = MagicMock()
+        message.reply_text = AsyncMock()
+        message.text = VIDEO_DOWNLOADER_BUTTON
+        update = SimpleNamespace(effective_message=message)
+
+        await reply_menu_handler(update, context)
+
+        text = message.reply_text.call_args.args[0]
+        self.assertIn("🎬 Video Downloader", text)
+        self.assertNotIn("youtube", text.lower())
+        self.assertNotIn("tiktok", text.lower())
+        markup = message.reply_text.call_args.kwargs["reply_markup"]
+        self.assertEqual(markup.inline_keyboard[0][0].callback_data, "menu:main")
 
 
 if __name__ == "__main__":
