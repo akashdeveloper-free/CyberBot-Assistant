@@ -11,7 +11,6 @@ from telegram.ext import ContextTypes
 from handlers.commands import help_handler, settings_handler
 from handlers.donation import DONATION_MENU_TEXT
 from handlers.donation import donate_command_handler
-from handlers.video_downloader import video_downloader_start_handler
 from keyboards.inline_buttons import back_to_main_keyboard, donation_menu_keyboard
 from keyboards.reply_keyboard import (
     DONATE_STARS_BUTTON,
@@ -19,7 +18,6 @@ from keyboards.reply_keyboard import (
     HELP_BUTTON,
     SECURITY_TOOLS_BUTTON,
     SETTINGS_BUTTON,
-    VIDEO_DOWNLOADER_BUTTON,
 )
 
 logger = logging.getLogger(__name__)
@@ -90,7 +88,7 @@ async def reply_menu_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """Route one of the six persistent main-menu buttons."""
+    """Route the persistent main-menu buttons."""
 
     message = update.effective_message
     if message is None or not message.text:
@@ -105,12 +103,7 @@ async def reply_menu_handler(
     if message.text == SETTINGS_BUTTON:
         await settings_handler(update, context)
         return
-    if message.text == VIDEO_DOWNLOADER_BUTTON:
-        await video_downloader_start_handler(update, context)
-        return
-
     feature_names = {
-        VIDEO_DOWNLOADER_BUTTON: "🎬 Video Downloader",
         FILE_TOOLS_BUTTON: "📁 File Tools",
         SECURITY_TOOLS_BUTTON: "🔐 Security Tools",
     }

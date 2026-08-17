@@ -8,7 +8,7 @@ monolith.
 ## Current features
 
 - `/start` welcome screen with a persistent Reply Keyboard for NovaBot.
-- Inline submenus for Video Downloader, File Tools, Security Tools, and Settings.
+- Inline submenus for File Tools, Security Tools, and Settings.
 - Telegram Menu Button commands for `/start`, `/donate`, `/help`, and `/settings`.
 - Telegram Stars donation options for 10 Stars, 50 Stars, 100 Stars, and a custom amount.
 - Custom amount validation that accepts positive whole numbers only.
@@ -20,8 +20,8 @@ monolith.
 - SQLite database preparation for future user accounts and usage metrics.
 - Environment-based configuration and structured application logging.
 
-Inactive future menu options are visible for product direction only; Video Downloader,
-File Tools, Security Tools, and Settings are not activated in this phase.
+Inactive future menu options are visible for product direction only; File Tools,
+Security Tools, and Settings are not activated in this phase.
 
 ## Installation
 
@@ -86,12 +86,11 @@ docs/PROJECT_STATUS.md
 ## Future roadmap
 
 1. User profile and account preferences.
-2. Video Downloader module with provider-specific services.
-3. File Tools module.
-4. Security Utilities module with explicit safety boundaries.
-5. AI Assistant features through a managed AI integration.
-6. Premium tiers and feature access controls.
-7. Admin analytics and expanded donation history.
+2. File Tools module.
+3. Security Utilities module with explicit safety boundaries.
+4. AI Assistant features through a managed AI integration.
+5. Premium tiers and feature access controls.
+6. Admin analytics and expanded donation history.
 
 Each roadmap item should be added as a separate handler/service module and should
 reuse the existing settings, logging, database, and navigation layers.
