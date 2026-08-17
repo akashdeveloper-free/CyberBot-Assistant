@@ -163,7 +163,7 @@ def build_application(settings: Settings) -> Application:
         MessageHandler(
             filters.Regex(
                 r"^(?:📁 File Tools|🔐 Security Tools|"
-                r"⚙️ Settings|⭐ Donate Stars|ℹ️ Help)$"
+                r"⚙️ Settings|⭐ Donate Stars|ℹ️ Help|🎬 Video Downloader)$"
             ),
             reply_menu_handler,
         )
