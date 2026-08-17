@@ -6,3 +6,12 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: exec python main.py
     healthCheckPath: /health
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: API_KEYS
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: APP_TIMEZONE
+        value: Asia/Dhaka

@@ -18,15 +18,19 @@ class Settings:
     bot_token: str
     database_path: Path
     port: int
+    mongodb_uri: str
 
 
 def load_settings() -> Settings:
     """Load and validate settings without exposing secret values."""
 
-    bot_token = os.getenv("BOT_TOKEN", "").strip()
+    bot_token = (
+        os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+        or os.getenv("BOT_TOKEN", "").strip()
+    )
     if not bot_token:
         raise RuntimeError(
-            "BOT_TOKEN is not configured. Add it as a Replit Secret or environment variable."
+            "TELEGRAM_BOT_TOKEN is not configured. Add it as a Replit Secret or environment variable."
         )
 
     database_path = Path(
@@ -45,4 +49,5 @@ def load_settings() -> Settings:
         bot_token=bot_token,
         database_path=database_path,
         port=port,
+        mongodb_uri=os.getenv("MONGODB_URI", "").strip(),
     )

@@ -20,6 +20,12 @@
 - `PreCheckoutQueryHandler` validation for currency, positive amount, payload
   format, and payload/amount matching.
 - Successful-payment persistence with duplicate Telegram charge protection.
+- Video Downloader is active for TikTok video/photo links and supported Any Link URLs.
+- Media is never downloaded to Render: yt-dlp runs with `download=False`, while Telegram
+  URL buttons point directly at the source stream.
+- MongoDB Atlas stores normalized metadata/direct URLs with a 36-hour TTL cache index.
+- HD quota is five unlocks per user per `Asia/Dhaka` calendar day; over-quota requests
+  use a one-Star Telegram invoice only after the HD URL is prepared.
 - SQLite users and donations schema with aggregate Stars and usage counters.
 - Render-compatible `/` and `/health` endpoints.
 - Guarded single-instance polling, webhook cleanup before polling, conflict
@@ -41,6 +47,8 @@ for user-facing flows and isolated temporary SQLite databases. It covers:
 - Polling lifecycle guards, webhook deletion, updater/application shutdown,
   health-server cleanup, and health endpoint responses.
 - Menu routing and future-feature back navigation.
+- Media menu navigation, URL normalization, direct-link result buttons, and downloader
+  payment payload helpers.
 
 ## Current architecture
 
@@ -52,6 +60,9 @@ for user-facing flows and isolated temporary SQLite databases. It covers:
 - `keyboards/` is the source of truth for reply and inline button layouts.
 - `services/telegram_stars.py` owns Stars invoice construction and pre-checkout
   validation. `services/health_server.py` owns the stoppable HTTP health server.
+- `services/video_downloader.py` owns metadata-only yt-dlp extraction, URL normalization,
+  MongoDB TTL caching, daily quota, and paid unlock persistence. `handlers/video_downloader.py`
+  owns the dynamic inline screens and payment safety routing.
 - `services/polling_lock.py` prevents more than one process from owning polling.
 - `database/database.py` owns SQLite schema setup and persistence operations.
 - `config/settings.py` loads environment configuration; `.env.example` documents

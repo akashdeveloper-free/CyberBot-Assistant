@@ -23,6 +23,7 @@ from handlers.donation import (
     successful_payment_handler,
 )
 from handlers.menu import menu_callback_handler, reply_menu_handler
+from handlers.video_downloader import MEDIA_DOWNLOADER_TEXT
 from handlers.start import WELCOME_TEXT, start_handler
 from keyboards.reply_keyboard import (
     DONATE_STARS_BUTTON,
@@ -346,7 +347,7 @@ class MenuTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(message.reply_text.call_args.args[0], DONATION_MENU_TEXT)
 
-    async def test_reply_video_downloader_routes_to_empty_placeholder(self):
+    async def test_reply_video_downloader_opens_dynamic_media_menu(self):
         context = _context()
         message = MagicMock()
         message.reply_text = AsyncMock()
@@ -356,12 +357,21 @@ class MenuTests(unittest.IsolatedAsyncioTestCase):
         await reply_menu_handler(update, context)
 
         text = message.reply_text.call_args.args[0]
-        self.assertIn("🎬 Video Downloader", text)
-        self.assertNotIn("http", text.lower())
-        self.assertNotIn("quality", text.lower())
-        self.assertNotIn("provider", text.lower())
+        self.assertEqual(text, MEDIA_DOWNLOADER_TEXT)
         markup = message.reply_text.call_args.kwargs["reply_markup"]
-        self.assertEqual(markup.inline_keyboard[0][0].callback_data, "menu:main")
+        buttons = {
+            button.text: button
+            for row in markup.inline_keyboard
+            for button in row
+        }
+        self.assertEqual(buttons["🎵 TikTok"].callback_data, "video:tiktok")
+        self.assertEqual(buttons["🎬 YouTube (Coming)"].callback_data, "video:coming")
+        self.assertEqual(buttons["📘 Facebook (Coming)"].callback_data, "video:coming")
+        self.assertEqual(buttons["🔗 Any Link"].callback_data, "video:any")
+        self.assertEqual(
+            buttons["🔙 Back to Main Menu"].callback_data,
+            "video:back-main",
+        )
 
 
 if __name__ == "__main__":

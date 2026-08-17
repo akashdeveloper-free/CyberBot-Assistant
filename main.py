@@ -25,18 +25,26 @@ from handlers.donation import (
     custom_amount_message_handler,
     donate_command_handler,
     donation_callback_handler,
-    pre_checkout_handler,
-    successful_payment_handler,
 )
 from handlers.menu import menu_callback_handler
 from handlers.menu import reply_menu_handler
 from handlers.start import start_handler
+from handlers.video_downloader import (
+    payment_pre_checkout_router,
+    successful_payment_router,
+    video_callback_handler,
+    video_link_message_handler,
+)
 from services.health_server import HealthServer
 from services.polling_lock import (
     PollingAlreadyRunningError,
     PollingInstanceLock,
 )
 from utils.logger import logger
+from services.video_downloader import (
+    VideoDownloadService,
+    build_store_from_environment,
+)
 
 
 _polling_run_guard = Lock()
@@ -130,6 +138,9 @@ async def post_shutdown(application: Application) -> None:
     database = application.bot_data.pop("database", None)
     if isinstance(database, Database):
         database.close()
+    video_service = application.bot_data.pop("video_downloader", None)
+    if video_service is not None and video_service.store is not None:
+        video_service.store.close()
 
 
 def build_application(settings: Settings) -> Application:
@@ -144,6 +155,9 @@ def build_application(settings: Settings) -> Application:
         .build()
     )
     application.bot_data["database"] = database
+    application.bot_data["video_downloader"] = VideoDownloadService(
+        build_store_from_environment(settings.mongodb_uri)
+    )
 
     application.add_handler(CommandHandler("start", start_handler))
     application.add_handler(CommandHandler("donate", donate_command_handler))
@@ -155,9 +169,12 @@ def build_application(settings: Settings) -> Application:
     application.add_handler(
         CallbackQueryHandler(donation_callback_handler, pattern=r"^donate:")
     )
-    application.add_handler(PreCheckoutQueryHandler(pre_checkout_handler))
     application.add_handler(
-        MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_handler)
+        CallbackQueryHandler(video_callback_handler, pattern=r"^video:")
+    )
+    application.add_handler(PreCheckoutQueryHandler(payment_pre_checkout_router))
+    application.add_handler(
+        MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_router)
     )
     application.add_handler(
         MessageHandler(
@@ -166,6 +183,12 @@ def build_application(settings: Settings) -> Application:
                 r"⚙️ Settings|⭐ Donate Stars|ℹ️ Help|🎬 Video Downloader)$"
             ),
             reply_menu_handler,
+        )
+    )
+    application.add_handler(
+        MessageHandler(
+            filters.Regex(r"https?://\S+"),
+            video_link_message_handler,
         )
     )
     application.add_handler(

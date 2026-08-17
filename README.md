@@ -1,9 +1,9 @@
 # NovaBot — Your Smart Digital Assistant
 
-NovaBot is a modular Telegram bot foundation for an all-in-one digital assistant. The
-first production feature is a secure Telegram Stars donation flow. Future modules can
-be added as independent handlers and services without turning `main.py` into a
-monolith.
+NovaBot is a modular Telegram bot foundation for an all-in-one digital assistant. It
+now includes a metadata-only TikTok/media downloader alongside the secure Telegram
+Stars donation flow. Future modules can be added as independent handlers and services
+without turning `main.py` into a monolith.
 
 ## Current features
 
@@ -15,6 +15,13 @@ monolith.
 - Telegram Stars invoices using `currency="XTR"` and an empty `provider_token`.
 - Pre-checkout validation with `PreCheckoutQueryHandler`.
 - Successful payment handling with duplicate-charge protection.
+- Dynamic Media Downloader menu for TikTok video/photo links and supported public URLs.
+- Direct SD links for unlimited free normal downloads; Render never stores or proxies
+  media bytes.
+- Five free HD unlocks per user per local day, followed by a one-Star Telegram invoice.
+- MongoDB Atlas cache with a 36-hour TTL index for normalized metadata and direct URLs.
+- Payment safety checks that prepare the HD URL before invoicing and refund when delivery
+  cannot be completed after a successful payment.
 - Render-compatible `/` and `/health` endpoints running beside Telegram polling.
 - Graceful SIGTERM and SIGINT shutdown for the polling updater and application.
 - SQLite database preparation for future user accounts and usage metrics.
@@ -45,13 +52,23 @@ Create a local `.env` file from the example:
 cp .env.example .env
 ```
 
-Set `BOT_TOKEN` to the token received from BotFather. In Replit, store it as a Secret
-named `BOT_TOKEN`; never put the real value in source code, documentation, or Git.
+Set `TELEGRAM_BOT_TOKEN` to the token received from BotFather. In Replit or Render,
+store it as a Secret; never put the real value in source code, documentation, or Git.
+`BOT_TOKEN` remains supported as a backwards-compatible fallback.
+
+Required for the downloader:
+
+- `TELEGRAM_BOT_TOKEN` — Telegram BotFather token.
+- `MONGODB_URI` — MongoDB Atlas connection string used for the cache, quota, and paid
+  unlock records.
+- `API_KEYS` — comma-separated API keys if another configured module needs them. yt-dlp
+  itself does not require an API key.
 
 Optional variables:
 
 - `DATABASE_PATH` — SQLite path; defaults to `database/cyberbot.sqlite3`.
 - `PORT` — HTTP health server port; Render supplies this automatically.
+- `APP_TIMEZONE` — local timezone used for the daily HD reset; defaults to `Asia/Dhaka`.
 - `LOG_LEVEL` — logging level; defaults to `INFO`.
 
 ## Run
@@ -74,9 +91,11 @@ handlers/start.py
 handlers/commands.py
 handlers/menu.py
 handlers/donation.py
+handlers/video_downloader.py
 keyboards/inline_buttons.py
 services/health_server.py
 services/telegram_stars.py
+services/video_downloader.py
 database/database.py
 utils/logger.py
 utils/helpers.py
