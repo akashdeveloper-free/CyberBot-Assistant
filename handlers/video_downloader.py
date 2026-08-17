@@ -72,6 +72,12 @@ def _url_keyboard() -> InlineKeyboardMarkup:
     )
 
 
+def _download_keyboard(link: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [[InlineKeyboardButton("Download Now", url=link)]]
+    )
+
+
 def _quality_keyboard(metadata: VideoMetadata) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(option.label, callback_data=f"video:quality:{option.option_id}")]
@@ -250,19 +256,15 @@ async def _deliver(message, context, request, metadata, option) -> None:
     if message is None:
         return
     if context.user_data.get(VIDEO_BUSY_KEY):
-        await message.reply_text("This request is already being prepared.", reply_markup=_url_keyboard())
+        await message.reply_text("This request is already being prepared.")
         return
     context.user_data[VIDEO_BUSY_KEY] = True
     try:
-        await message.reply_text(
-            "Preparing a temporary download link…", reply_markup=_url_keyboard()
-        )
         link = await _service(context).prepare_delivery(request, metadata, option)
         await message.reply_text(
-            "✅ Your temporary download link is ready:\n\n"
-            f"{link}\n\n"
-            "The link expires soon. NovaBot does not store the video.",
-            reply_markup=_url_keyboard(),
+            "✅ Your download is ready.\n\n"
+            "The secure link expires soon. NovaBot does not store the video.",
+            reply_markup=_download_keyboard(link),
         )
     except DownloadError as exc:
         await message.reply_text(

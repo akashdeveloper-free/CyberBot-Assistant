@@ -6,6 +6,10 @@ import os
 from dataclasses import dataclass
 
 
+MIN_LINK_TTL_SECONDS = 60
+MAX_LINK_TTL_SECONDS = 900
+
+
 def _optional_env(name: str) -> str | None:
     value = os.getenv(name, "").strip()
     return value or None
@@ -48,6 +52,19 @@ class VideoDownloaderConfig:
     rate_limit_seconds: float = 3.0
     link_ttl_seconds: int = 300
 
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.link_ttl_seconds, int)
+            or isinstance(self.link_ttl_seconds, bool)
+            or not MIN_LINK_TTL_SECONDS
+            <= self.link_ttl_seconds
+            <= MAX_LINK_TTL_SECONDS
+        ):
+            raise ValueError(
+                f"link_ttl_seconds must be between "
+                f"{MIN_LINK_TTL_SECONDS} and {MAX_LINK_TTL_SECONDS}."
+            )
+
     @classmethod
     def from_environment(cls) -> "VideoDownloaderConfig":
         """Load optional downloader settings without exposing their values."""
@@ -74,6 +91,9 @@ class VideoDownloaderConfig:
                 "VIDEO_DOWNLOADER_RATE_LIMIT_SECONDS", 3.0, 0.0, 3600.0
             ),
             link_ttl_seconds=_int_env(
-                "VIDEO_DOWNLOADER_LINK_TTL_SECONDS", 300, 60, 3600
+                "VIDEO_DOWNLOADER_LINK_TTL_SECONDS",
+                300,
+                MIN_LINK_TTL_SECONDS,
+                MAX_LINK_TTL_SECONDS,
             ),
         )
