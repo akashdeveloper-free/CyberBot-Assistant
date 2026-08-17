@@ -7,6 +7,7 @@ from telegram import ReplyKeyboardMarkup
 
 FILE_TOOLS_BUTTON = "📁 File Tools"
 SECURITY_TOOLS_BUTTON = "🔐 Security Tools"
+VIDEO_DOWNLOADER_BUTTON = "🎬 Video Downloader"
 SETTINGS_BUTTON = "⚙️ Settings"
 DONATE_STARS_BUTTON = "⭐ Donate Stars"
 HELP_BUTTON = "ℹ️ Help"
@@ -14,6 +15,7 @@ HELP_BUTTON = "ℹ️ Help"
 MAIN_MENU_BUTTONS = (
     FILE_TOOLS_BUTTON,
     SECURITY_TOOLS_BUTTON,
+    VIDEO_DOWNLOADER_BUTTON,
     SETTINGS_BUTTON,
     DONATE_STARS_BUTTON,
     HELP_BUTTON,
@@ -28,6 +30,7 @@ def main_reply_keyboard() -> ReplyKeyboardMarkup:
             [FILE_TOOLS_BUTTON, SECURITY_TOOLS_BUTTON],
             [SETTINGS_BUTTON, DONATE_STARS_BUTTON],
             [HELP_BUTTON],
+            [VIDEO_DOWNLOADER_BUTTON],
         ],
         resize_keyboard=True,
         is_persistent=True,
