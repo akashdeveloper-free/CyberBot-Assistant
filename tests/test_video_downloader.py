@@ -45,6 +45,7 @@ from services.video_downloader.providers.base import (
     ProviderTimeout,
     VideoProvider,
 )
+from services.video_downloader.providers.ytdlp import YtDlpProvider
 from services.video_downloader.router import ProviderRouter
 from services.video_downloader.security import (
     UnsafeUrlError,
@@ -137,6 +138,50 @@ class UrlAndProviderTests(unittest.IsolatedAsyncioTestCase):
                 validate_source_url(unsafe)
         self.assertEqual(sanitize_filename("../../bad<>name?.mp4"), "badname.mp4")
 
+    def test_supported_tiktok_urls_pass_source_validation(self):
+        urls = (
+            "https://vt.tiktok.com/ZExample/",
+            "https://vm.tiktok.com/ZExample/",
+            "https://www.tiktok.com/@user/video/1234567890",
+            "https://tiktok.com/@user/video/1234567890",
+        )
+        for url in urls:
+            with self.subTest(url=url):
+                self.assertEqual(validate_source_url(url), url)
+
+    def test_ytdlp_provider_is_selected_when_binary_is_available(self):
+        config = VideoDownloaderConfig()
+        with patch(
+            "services.video_downloader.providers.ytdlp.shutil.which",
+            return_value="/usr/bin/yt-dlp",
+        ):
+            router = ProviderRouter(config)
+        self.assertEqual([provider.name for provider in router.providers], ["yt-dlp"])
+        self.assertTrue(router.ytdlp.configured)
+
+    def test_ytdlp_tiktok_metadata_contract(self):
+        provider = YtDlpProvider(VideoDownloaderConfig(ytdlp_path="/usr/bin/yt-dlp"))
+        metadata = provider._metadata(
+            "https://vt.tiktok.com/ZExample/",
+            Platform.TIKTOK,
+            {
+                "title": "TikTok example",
+                "duration": 8,
+                "formats": [
+                    {
+                        "url": "https://cdn.example/video.mp4",
+                        "vcodec": "h264",
+                        "acodec": "aac",
+                        "height": 720,
+                        "ext": "mp4",
+                    }
+                ],
+            },
+        )
+        self.assertEqual(metadata.provider_name, "yt-dlp")
+        self.assertEqual(metadata.source_url, "https://vt.tiktok.com/ZExample/")
+        self.assertEqual(metadata.options[0].option_id, "best")
+
     async def test_platform_detection_is_carried_to_provider(self):
         provider = FakeProvider(_metadata())
         config = VideoDownloaderConfig(worker_url=None)
@@ -157,8 +202,12 @@ class UrlAndProviderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(second.seen_platform, Platform.YOUTUBE)
 
     def test_cobalt_is_optional_and_no_random_endpoint_is_created(self):
-        router = ProviderRouter(VideoDownloaderConfig())
-        self.assertEqual(router.providers, ())
+        with patch(
+            "services.video_downloader.providers.ytdlp.shutil.which",
+            return_value=None,
+        ):
+            router = ProviderRouter(VideoDownloaderConfig())
+        self.assertNotIn("cobalt", [provider.name for provider in router.providers])
 
 
 class DownloaderFlowTests(unittest.IsolatedAsyncioTestCase):
