@@ -357,8 +357,9 @@ class MenuTests(unittest.IsolatedAsyncioTestCase):
 
         text = message.reply_text.call_args.args[0]
         self.assertIn("🎬 Video Downloader", text)
-        self.assertNotIn("youtube", text.lower())
-        self.assertNotIn("tiktok", text.lower())
+        self.assertNotIn("http", text.lower())
+        self.assertNotIn("quality", text.lower())
+        self.assertNotIn("provider", text.lower())
         markup = message.reply_text.call_args.kwargs["reply_markup"]
         self.assertEqual(markup.inline_keyboard[0][0].callback_data, "menu:main")
 
