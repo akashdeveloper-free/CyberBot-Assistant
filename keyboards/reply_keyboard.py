@@ -27,10 +27,9 @@ def main_reply_keyboard() -> ReplyKeyboardMarkup:
 
     return ReplyKeyboardMarkup(
         keyboard=[
-            [FILE_TOOLS_BUTTON, SECURITY_TOOLS_BUTTON],
-            [SETTINGS_BUTTON, DONATE_STARS_BUTTON],
-            [HELP_BUTTON],
-            [VIDEO_DOWNLOADER_BUTTON],
+            [VIDEO_DOWNLOADER_BUTTON, FILE_TOOLS_BUTTON],
+            [SECURITY_TOOLS_BUTTON, SETTINGS_BUTTON],
+            [DONATE_STARS_BUTTON, HELP_BUTTON],
         ],
         resize_keyboard=True,
         is_persistent=True,
