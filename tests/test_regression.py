@@ -9,7 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from telegram.error import Conflict
+from telegram.error import BadRequest, Conflict
 
 from database.database import Database
 from handlers.donation import (
@@ -23,7 +23,7 @@ from handlers.donation import (
     successful_payment_handler,
 )
 from handlers.menu import menu_callback_handler, reply_menu_handler
-from handlers.video_downloader import MEDIA_DOWNLOADER_TEXT
+from handlers.video_downloader import MEDIA_DOWNLOADER_TEXT, _edit_query_screen
 from handlers.start import WELCOME_TEXT, start_handler
 from keyboards.reply_keyboard import (
     DONATE_STARS_BUTTON,
@@ -372,6 +372,23 @@ class MenuTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             buttons["⬅️ Main Menu"].callback_data,
             "video:back-main",
+        )
+
+
+class VideoDownloaderEditingTests(unittest.IsolatedAsyncioTestCase):
+    async def test_media_callback_falls_back_to_caption_edit(self):
+        query = SimpleNamespace(
+            edit_message_text=AsyncMock(
+                side_effect=BadRequest("There is no text in the message to edit")
+            ),
+            edit_message_caption=AsyncMock(),
+        )
+
+        await _edit_query_screen(query, "Updated downloader caption")
+
+        query.edit_message_caption.assert_awaited_once_with(
+            caption="Updated downloader caption",
+            reply_markup=None,
         )
 
 

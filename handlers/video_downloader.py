@@ -92,7 +92,8 @@ async def _edit_saved_prompt(
     prompt = context.user_data.get(VIDEO_PROMPT_MESSAGE_KEY)
     if isinstance(prompt, dict) and prompt.get("chat_id") and prompt.get("message_id"):
         try:
-            await context.bot.edit_message_text(
+            await _edit_bot_screen(
+                context.bot,
                 chat_id=prompt["chat_id"],
                 message_id=prompt["message_id"],
                 text=text,
@@ -106,6 +107,69 @@ async def _edit_saved_prompt(
     if message is not None:
         sent = await message.reply_text(text, reply_markup=reply_markup)
         _remember_prompt(context, sent)
+
+
+async def _edit_bot_screen(
+    bot,
+    *,
+    chat_id: int,
+    message_id: int,
+    text: str,
+    reply_markup=None,
+    parse_mode: str | None = None,
+) -> None:
+    """Edit text messages and photo captions through one safe API."""
+
+    text_kwargs = {
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "text": text,
+        "reply_markup": reply_markup,
+    }
+    if parse_mode is not None:
+        text_kwargs["parse_mode"] = parse_mode
+    try:
+        await bot.edit_message_text(**text_kwargs)
+        return
+    except BadRequest as exc:
+        if "there is no text in the message" not in str(exc).lower():
+            raise
+
+    caption_kwargs = {
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "caption": text,
+        "reply_markup": reply_markup,
+    }
+    if parse_mode is not None:
+        caption_kwargs["parse_mode"] = parse_mode
+    await bot.edit_message_caption(**caption_kwargs)
+
+
+async def _edit_query_screen(
+    query,
+    text: str,
+    reply_markup=None,
+    parse_mode: str | None = None,
+) -> None:
+    """Edit a callback's text message or its media caption."""
+
+    text_kwargs = {"text": text, "reply_markup": reply_markup}
+    if parse_mode is not None:
+        text_kwargs["parse_mode"] = parse_mode
+    try:
+        await query.edit_message_text(**text_kwargs)
+        return
+    except BadRequest as exc:
+        if "there is no text in the message" not in str(exc).lower():
+            raise
+        edit_caption = getattr(query, "edit_message_caption", None)
+        if edit_caption is None:
+            raise exc
+        caption_kwargs = {"caption": text, "reply_markup": reply_markup}
+        if parse_mode is not None:
+            caption_kwargs["parse_mode"] = parse_mode
+        await edit_caption(**caption_kwargs)
 
 
 def _metadata_text(metadata: VideoMetadata) -> str:
@@ -151,7 +215,8 @@ async def _edit_result_message(
                     reply_markup=markup,
                 )
             else:
-                await context.bot.edit_message_text(
+                await _edit_bot_screen(
+                    context.bot,
                     chat_id=chat_id,
                     message_id=prompt["message_id"],
                     text=_metadata_text(metadata),
@@ -184,7 +249,8 @@ async def _edit_result_message(
                 logger.info("Could not send downloader thumbnail: %s", exc)
 
         try:
-            await context.bot.edit_message_text(
+            await _edit_bot_screen(
+                context.bot,
                 chat_id=chat_id,
                 message_id=prompt["message_id"],
                 text=_metadata_text(metadata),
@@ -240,7 +306,8 @@ async def video_callback_handler(
 
     if action == "menu":
         _clear_video_state(context)
-        await query.edit_message_text(
+        await _edit_query_screen(
+            query,
             MEDIA_DOWNLOADER_TEXT,
             reply_markup=media_downloader_keyboard(),
         )
@@ -248,7 +315,8 @@ async def video_callback_handler(
     source = action.removeprefix("source:")
     if source in SOURCE_PROMPTS:
         context.user_data[VIDEO_MODE_KEY] = source
-        await query.edit_message_text(
+        await _edit_query_screen(
+            query,
             _prompt_text(source),
             reply_markup=video_prompt_keyboard(),
         )
@@ -257,7 +325,8 @@ async def video_callback_handler(
         return
     if action in {"back-main", "back"}:
         _clear_video_state(context)
-        await query.edit_message_text(
+        await _edit_query_screen(
+            query,
             "🤖 NovaBot — Main Menu\nYour Smart Digital Assistant",
             reply_markup=None,
         )
@@ -265,7 +334,8 @@ async def video_callback_handler(
     if action == "back-tiktok":
         context.user_data.pop(VIDEO_METADATA_KEY, None)
         context.user_data[VIDEO_MODE_KEY] = "tiktok"
-        await query.edit_message_text(
+        await _edit_query_screen(
+            query,
             _prompt_text("tiktok"),
             reply_markup=video_prompt_keyboard(),
         )
@@ -314,7 +384,8 @@ async def _handle_hd_request(
     query = update.callback_query
     if not isinstance(metadata, VideoMetadata) or user is None or query is None:
         if query:
-            await query.edit_message_text(
+            await _edit_query_screen(
+                query,
                 "This download session expired. Please send the link again.",
                 reply_markup=media_downloader_keyboard(),
             )
@@ -324,7 +395,8 @@ async def _handle_hd_request(
         # HD is checked only after the user explicitly taps the HD action.
         metadata = await _service(context).prepare_hd(metadata)
     except VideoDownloaderError as exc:
-        await query.edit_message_text(
+        await _edit_query_screen(
+            query,
             str(exc),
             reply_markup=video_prompt_keyboard(),
         )
@@ -332,7 +404,8 @@ async def _handle_hd_request(
 
     store = _service(context).store
     if store is None:
-        await query.edit_message_text(
+        await _edit_query_screen(
+            query,
             "HD downloads are temporarily unavailable because MongoDB is not configured.",
             reply_markup=video_prompt_keyboard(),
         )
@@ -344,7 +417,8 @@ async def _handle_hd_request(
             raise VideoDownloaderError("The cached stream expired. Please send the link again.")
 
         if store.claim_free_hd(user.id, user.username, usage_day_key()):
-            await query.edit_message_text(
+            await _edit_query_screen(
+                query,
                 "✅ Your free HD stream is ready.",
                 reply_markup=media_result_with_hd_link_keyboard(metadata),
             )
@@ -364,14 +438,16 @@ async def _handle_hd_request(
             "cache_key": metadata.cache_key,
             "message_id": query.message.message_id if query.message else None,
         }
-        await query.edit_message_text(
+        await _edit_query_screen(
+            query,
             f"🌟 You have used your {HD_FREE_LIMIT} free HD downloads today.\n\n"
             "Pay 1 Telegram Star to unlock this HD direct stream.",
             reply_markup=video_prompt_keyboard(),
         )
     except (VideoDownloaderError, PyMongoError, TelegramError) as exc:
         logger.warning("Could not prepare HD download: %s", exc)
-        await query.edit_message_text(
+        await _edit_query_screen(
+            query,
             "We could not prepare the HD stream, so no payment was requested. "
             "Please try again.",
             reply_markup=video_prompt_keyboard(),
