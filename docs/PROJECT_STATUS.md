@@ -20,9 +20,14 @@
 - `PreCheckoutQueryHandler` validation for currency, positive amount, payload
   format, and payload/amount matching.
 - Successful-payment persistence with duplicate Telegram charge protection.
-- Video Downloader is active for TikTok video/photo links and supported Any Link URLs.
+- Video Downloader uses one unified inline menu for TikTok, YouTube, Facebook, Instagram,
+  and supported public links.
 - Media is never downloaded to Render: yt-dlp runs with `download=False`, while Telegram
   URL buttons point directly at the source stream.
+- yt-dlp is the only default extractor. There is no RapidAPI key rotation or RapidAPI
+  call for metadata, thumbnails, normal streams, or ordinary link inspection.
+- HD handling is activated only when the user explicitly selects HD; a source without a
+  genuinely higher-resolution direct stream is not mislabeled as HD.
 - MongoDB Atlas stores normalized metadata/direct URLs with a 36-hour TTL cache index.
 - HD quota is five unlocks per user per `Asia/Dhaka` calendar day; over-quota requests
   use a one-Star Telegram invoice only after the HD URL is prepared.
@@ -47,8 +52,8 @@ for user-facing flows and isolated temporary SQLite databases. It covers:
 - Polling lifecycle guards, webhook deletion, updater/application shutdown,
   health-server cleanup, and health endpoint responses.
 - Menu routing and future-feature back navigation.
-- Media menu navigation, URL normalization, direct-link result buttons, and downloader
-  payment payload helpers.
+- Unified media menu navigation, URL normalization, direct-link result buttons, HD
+  routing, and downloader payment payload helpers.
 
 ## Current architecture
 

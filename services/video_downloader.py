@@ -25,6 +25,12 @@ HD_FREE_LIMIT = 5
 HD_PRICE_STARS = 1
 CACHE_TTL_HOURS = 36
 VIDEO_HD_PAYMENT_PREFIX = "cyberbot:video-hd:"
+DEFAULT_HTTP_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+    ),
+}
 
 
 class VideoDownloaderError(RuntimeError):
@@ -286,7 +292,11 @@ def _stream_url(info: dict[str, Any], *, hd: bool) -> str | None:
     ]
     if not formats:
         direct_url = info.get("url")
-        return str(direct_url) if direct_url else None
+        if not direct_url:
+            return None
+        if hd and int(info.get("height") or 0) <= 720:
+            return None
+        return str(direct_url)
 
     def rank(item: dict[str, Any]) -> tuple[int, float, float]:
         height = int(item.get("height") or 0)
@@ -295,7 +305,12 @@ def _stream_url(info: dict[str, Any], *, hd: bool) -> str | None:
         return height, tbr, fps
 
     if hd:
-        chosen = max(formats, key=rank)
+        # Do not label a 360p/720p-only source as HD.  A paid HD action must
+        # always point to a genuinely higher-resolution format.
+        hd_formats = [item for item in formats if int(item.get("height") or 0) > 720]
+        if not hd_formats:
+            return None
+        chosen = max(hd_formats, key=rank)
     else:
         sd = [item for item in formats if int(item.get("height") or 0) <= 720]
         chosen = max(sd or formats, key=rank)
@@ -326,7 +341,7 @@ def _metadata_from_info(info: dict[str, Any], normalized_url: str) -> VideoMetad
 
     photos = _photo_urls(info)
     normal_url = _stream_url(info, hd=False) or (photos[0] if photos else "")
-    hd_url = _stream_url(info, hd=True) or normal_url
+    hd_url = _stream_url(info, hd=True) or ""
     if not normal_url:
         raise VideoDownloaderError("No direct media stream was available for that link.")
 
@@ -357,6 +372,12 @@ def _extract_metadata(normalized_url: str) -> VideoMetadata:
             "skip_download": True,
             "noplaylist": False,
             "extract_flat": False,
+            # These headers are used only while resolving the signed CDN URL.
+            # The bot never proxies the resulting media bytes.
+            "http_headers": {
+                **DEFAULT_HTTP_HEADERS,
+                "Referer": normalized_url,
+            },
         }
         with yt_dlp.YoutubeDL(options) as downloader:
             info = downloader.extract_info(normalized_url, download=False)
@@ -404,7 +425,7 @@ class VideoDownloadService:
     async def prepare_hd(self, metadata: VideoMetadata) -> VideoMetadata:
         """Ensure HD metadata is available before creating a Stars invoice."""
 
-        if metadata.hd_url:
+        if metadata.hd_url and metadata.hd_url != metadata.normal_url:
             if self.store is not None:
                 try:
                     self.store.put_cache(metadata)

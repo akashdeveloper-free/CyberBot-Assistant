@@ -364,12 +364,13 @@ class MenuTests(unittest.IsolatedAsyncioTestCase):
             for row in markup.inline_keyboard
             for button in row
         }
-        self.assertEqual(buttons["🎵 TikTok"].callback_data, "video:tiktok")
-        self.assertEqual(buttons["🎬 YouTube (Coming)"].callback_data, "video:coming")
-        self.assertEqual(buttons["📘 Facebook (Coming)"].callback_data, "video:coming")
-        self.assertEqual(buttons["🔗 Any Link"].callback_data, "video:any")
+        self.assertEqual(buttons["🎵 TikTok"].callback_data, "video:source:tiktok")
+        self.assertEqual(buttons["▶️ YouTube"].callback_data, "video:source:youtube")
+        self.assertEqual(buttons["📘 Facebook"].callback_data, "video:source:facebook")
+        self.assertEqual(buttons["📸 Instagram"].callback_data, "video:source:instagram")
+        self.assertEqual(buttons["🔗 Any Public Link"].callback_data, "video:source:any")
         self.assertEqual(
-            buttons["🔙 Back to Main Menu"].callback_data,
+            buttons["⬅️ Main Menu"].callback_data,
             "video:back-main",
         )
 

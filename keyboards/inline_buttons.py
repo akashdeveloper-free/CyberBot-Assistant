@@ -57,67 +57,70 @@ def back_to_main_keyboard() -> InlineKeyboardMarkup:
 
 
 def media_downloader_keyboard() -> InlineKeyboardMarkup:
-    """Main source selector for the media downloader."""
+    """Single clean platform selector for the media downloader."""
 
     return InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("🎵 TikTok", callback_data="video:tiktok"),
-                InlineKeyboardButton("🎬 YouTube (Coming)", callback_data="video:coming"),
+                InlineKeyboardButton("🎵 TikTok", callback_data="video:source:tiktok"),
+                InlineKeyboardButton("▶️ YouTube", callback_data="video:source:youtube"),
             ],
             [
-                InlineKeyboardButton("📘 Facebook (Coming)", callback_data="video:coming"),
-                InlineKeyboardButton("🔗 Any Link", callback_data="video:any"),
+                InlineKeyboardButton("📘 Facebook", callback_data="video:source:facebook"),
+                InlineKeyboardButton("📸 Instagram", callback_data="video:source:instagram"),
             ],
-            [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="video:back-main")],
+            [InlineKeyboardButton("🔗 Any Public Link", callback_data="video:source:any")],
+            [InlineKeyboardButton("⬅️ Main Menu", callback_data="video:back-main")],
         ]
     )
 
 
-def tiktok_prompt_keyboard(back_callback: str = "video:menu") -> InlineKeyboardMarkup:
-    """Back navigation from a source link prompt."""
+def video_prompt_keyboard() -> InlineKeyboardMarkup:
+    """One consistent back action from a source prompt or result."""
 
-    label = (
-        "🔙 Back to Video Downloader"
-        if back_callback == "video:menu"
-        else "🔙 Back to Main Menu"
-    )
     return InlineKeyboardMarkup(
-        [[InlineKeyboardButton(label, callback_data=back_callback)]]
+        [[InlineKeyboardButton("⬅️ Downloader", callback_data="video:menu")]]
     )
 
 
 def media_result_keyboard(metadata: VideoMetadata) -> InlineKeyboardMarkup:
-    """Quality choices with direct free URL buttons."""
+    """Quality choices with direct stream URL buttons."""
 
-    rows = [
-        [
-            InlineKeyboardButton("🌟 HD (No Watermark)", callback_data="video:hd"),
-            InlineKeyboardButton("⚡ Normal (Free)", url=metadata.normal_url),
-        ]
-    ]
-    for index, photo_url in enumerate(metadata.photo_urls[:8], start=1):
-        rows.append([InlineKeyboardButton(f"🖼 Photo {index}", url=photo_url)])
+    rows = []
+    if metadata.hd_url:
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    "🌟 Unlock HD / No-Watermark",
+                    callback_data="video:hd",
+                )
+            ]
+        )
     rows.append(
-        [InlineKeyboardButton("🔙 Back to TikTok Menu", callback_data="video:back-tiktok")]
+        [InlineKeyboardButton("📥 Download Normal (Free)", url=metadata.normal_url)]
     )
+    for index, photo_url in enumerate(metadata.photo_urls[:8], start=1):
+        if index % 2:
+            rows.append([])
+        rows[-1].append(InlineKeyboardButton(f"🖼 Photo {index}", url=photo_url))
+    rows.append([InlineKeyboardButton("⬅️ Downloader", callback_data="video:menu")])
     return InlineKeyboardMarkup(rows)
 
 
 def media_result_with_hd_link_keyboard(
     metadata: VideoMetadata,
 ) -> InlineKeyboardMarkup:
-    """Show the already-authorized HD link alongside the free link."""
+    """Show already-authorized direct stream links."""
 
     rows = [
         [
-            InlineKeyboardButton("🌟 HD (No Watermark)", url=metadata.hd_url),
-            InlineKeyboardButton("⚡ Normal (Free)", url=metadata.normal_url),
+            InlineKeyboardButton("📥 Download HD Video", url=metadata.hd_url),
+            InlineKeyboardButton("📥 Normal (Free)", url=metadata.normal_url),
         ]
     ]
     for index, photo_url in enumerate(metadata.photo_urls[:8], start=1):
-        rows.append([InlineKeyboardButton(f"🖼 Photo {index}", url=photo_url)])
-    rows.append(
-        [InlineKeyboardButton("🔙 Back to TikTok Menu", callback_data="video:back-tiktok")]
-    )
+        if index % 2:
+            rows.append([])
+        rows[-1].append(InlineKeyboardButton(f"🖼 Photo {index}", url=photo_url))
+    rows.append([InlineKeyboardButton("⬅️ Downloader", callback_data="video:menu")])
     return InlineKeyboardMarkup(rows)

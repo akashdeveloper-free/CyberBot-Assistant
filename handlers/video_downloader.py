@@ -14,7 +14,7 @@ from keyboards.inline_buttons import (
     media_downloader_keyboard,
     media_result_keyboard,
     media_result_with_hd_link_keyboard,
-    tiktok_prompt_keyboard,
+    video_prompt_keyboard,
 )
 from services.telegram_stars import DONATION_CURRENCY
 from services.video_downloader import (
@@ -32,18 +32,16 @@ from services.video_downloader import (
 logger = logging.getLogger(__name__)
 
 MEDIA_DOWNLOADER_TEXT = (
-    "🎬 Media Downloader\n\n"
-    "Choose a source. Direct links are used so the bot never uploads large "
-    "media files through Render."
+    "🎬 Video Downloader\n\n"
+    "Choose a platform, then send its public link."
 )
-TIKTOK_PROMPT_TEXT = (
-    "🎵 TikTok Downloader\n\n"
-    "Send a TikTok video link or a photo slideshow link."
-)
-ANY_LINK_PROMPT_TEXT = (
-    "🔗 Any Link Downloader\n\n"
-    "Send a supported public media link."
-)
+SOURCE_PROMPTS = {
+    "tiktok": "🎵 TikTok\n\nSend a public video or photo-slideshow link.",
+    "youtube": "▶️ YouTube\n\nSend a public video link.",
+    "facebook": "📘 Facebook\n\nSend a public video link.",
+    "instagram": "📸 Instagram\n\nSend a public video link.",
+    "any": "🔗 Any Public Link\n\nSend a supported public media link.",
+}
 VIDEO_METADATA_KEY = "VIDEO_DOWNLOADER_METADATA"
 VIDEO_MODE_KEY = "VIDEO_DOWNLOADER_MODE"
 VIDEO_PROMPT_MESSAGE_KEY = "VIDEO_DOWNLOADER_PROMPT_MESSAGE"
@@ -62,6 +60,52 @@ def _clear_video_state(context: ContextTypes.DEFAULT_TYPE) -> None:
         VIDEO_PENDING_PAYMENT_KEY,
     ):
         context.user_data.pop(key, None)
+
+
+def _prompt_text(mode: str | None) -> str:
+    """Return the short prompt for one platform in the unified menu."""
+
+    return SOURCE_PROMPTS.get(mode or "any", SOURCE_PROMPTS["any"])
+
+
+def _remember_prompt(context: ContextTypes.DEFAULT_TYPE, message: object) -> None:
+    """Keep the one bot message that should be edited through this flow."""
+
+    chat = getattr(message, "chat", None)
+    chat_id = getattr(chat, "id", None) or getattr(message, "chat_id", None)
+    message_id = getattr(message, "message_id", None)
+    if chat_id and message_id:
+        context.user_data[VIDEO_PROMPT_MESSAGE_KEY] = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+        }
+
+
+async def _edit_saved_prompt(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    text: str,
+    reply_markup,
+) -> None:
+    """Edit the saved bot prompt; reply only when no editable prompt exists."""
+
+    prompt = context.user_data.get(VIDEO_PROMPT_MESSAGE_KEY)
+    if isinstance(prompt, dict) and prompt.get("chat_id") and prompt.get("message_id"):
+        try:
+            await context.bot.edit_message_text(
+                chat_id=prompt["chat_id"],
+                message_id=prompt["message_id"],
+                text=text,
+                reply_markup=reply_markup,
+            )
+            return
+        except (BadRequest, TelegramError) as exc:
+            logger.info("Could not edit downloader prompt: %s", exc)
+
+    message = update.effective_message
+    if message is not None:
+        sent = await message.reply_text(text, reply_markup=reply_markup)
+        _remember_prompt(context, sent)
 
 
 def _metadata_text(metadata: VideoMetadata) -> str:
@@ -201,35 +245,15 @@ async def video_callback_handler(
             reply_markup=media_downloader_keyboard(),
         )
         return
-    if action == "tiktok":
-        context.user_data[VIDEO_MODE_KEY] = "tiktok"
+    source = action.removeprefix("source:")
+    if source in SOURCE_PROMPTS:
+        context.user_data[VIDEO_MODE_KEY] = source
         await query.edit_message_text(
-            TIKTOK_PROMPT_TEXT,
-            reply_markup=tiktok_prompt_keyboard(back_callback="video:menu"),
+            _prompt_text(source),
+            reply_markup=video_prompt_keyboard(),
         )
         if query.message:
-            context.user_data[VIDEO_PROMPT_MESSAGE_KEY] = {
-                "chat_id": query.message.chat_id,
-                "message_id": query.message.message_id,
-            }
-        return
-    if action == "coming":
-        await query.edit_message_text(
-            "This source is coming soon. TikTok and Any Link are available now.",
-            reply_markup=media_downloader_keyboard(),
-        )
-        return
-    if action == "any":
-        context.user_data[VIDEO_MODE_KEY] = "any"
-        await query.edit_message_text(
-            ANY_LINK_PROMPT_TEXT,
-            reply_markup=tiktok_prompt_keyboard(back_callback="video:menu"),
-        )
-        if query.message:
-            context.user_data[VIDEO_PROMPT_MESSAGE_KEY] = {
-                "chat_id": query.message.chat_id,
-                "message_id": query.message.message_id,
-            }
+            _remember_prompt(context, query.message)
         return
     if action in {"back-main", "back"}:
         _clear_video_state(context)
@@ -242,8 +266,8 @@ async def video_callback_handler(
         context.user_data.pop(VIDEO_METADATA_KEY, None)
         context.user_data[VIDEO_MODE_KEY] = "tiktok"
         await query.edit_message_text(
-            TIKTOK_PROMPT_TEXT,
-            reply_markup=tiktok_prompt_keyboard(back_callback="video:menu"),
+            _prompt_text("tiktok"),
+            reply_markup=video_prompt_keyboard(),
         )
         return
     if action == "hd":
@@ -258,7 +282,7 @@ async def video_link_message_handler(
 
     mode = context.user_data.get(VIDEO_MODE_KEY)
     message = update.effective_message
-    if mode not in {"tiktok", "any"} or message is None or not message.text:
+    if mode not in SOURCE_PROMPTS or message is None or not message.text:
         return
 
     try:
@@ -267,13 +291,11 @@ async def video_link_message_handler(
             tiktok_only=mode == "tiktok",
         )
     except VideoDownloaderError as exc:
-        await message.reply_text(
+        await _edit_saved_prompt(
+            update,
+            context,
             f"Could not read that link.\n\n{exc}",
-            reply_markup=tiktok_prompt_keyboard(
-                back_callback="video:back-tiktok"
-                if mode == "tiktok"
-                else "video:menu"
-            ),
+            video_prompt_keyboard(),
         )
         return
 
@@ -298,18 +320,25 @@ async def _handle_hd_request(
             )
         return
 
+    try:
+        # HD is checked only after the user explicitly taps the HD action.
+        metadata = await _service(context).prepare_hd(metadata)
+    except VideoDownloaderError as exc:
+        await query.edit_message_text(
+            str(exc),
+            reply_markup=video_prompt_keyboard(),
+        )
+        return
+
     store = _service(context).store
     if store is None:
         await query.edit_message_text(
             "HD downloads are temporarily unavailable because MongoDB is not configured.",
-            reply_markup=tiktok_prompt_keyboard(),
+            reply_markup=video_prompt_keyboard(),
         )
         return
 
     try:
-        # The extraction already happened before the invoice. This means an API
-        # error cannot occur after payment is approved.
-        metadata = await _service(context).prepare_hd(metadata)
         cached = store.get_cache(metadata.cache_key)
         if cached is None:
             raise VideoDownloaderError("The cached stream expired. Please send the link again.")
@@ -338,14 +367,14 @@ async def _handle_hd_request(
         await query.edit_message_text(
             f"🌟 You have used your {HD_FREE_LIMIT} free HD downloads today.\n\n"
             "Pay 1 Telegram Star to unlock this HD direct stream.",
-            reply_markup=tiktok_prompt_keyboard(back_callback="video:menu"),
+            reply_markup=video_prompt_keyboard(),
         )
     except (VideoDownloaderError, PyMongoError, TelegramError) as exc:
         logger.warning("Could not prepare HD download: %s", exc)
         await query.edit_message_text(
             "We could not prepare the HD stream, so no payment was requested. "
             "Please try again.",
-            reply_markup=tiktok_prompt_keyboard(back_callback="video:menu"),
+            reply_markup=video_prompt_keyboard(),
         )
 
 
@@ -432,11 +461,14 @@ async def video_successful_payment_handler(
             )
         except TelegramError:
             logger.exception("Could not refund a paid HD invoice after cache failure.")
-        if message:
-            await message.reply_text(
-                "The HD stream expired before delivery. The 1 Star payment was refunded "
-                "automatically when Telegram allowed it."
-            )
+        await _edit_saved_prompt(
+            update,
+            context,
+            "The HD stream expired before delivery. The 1 Star payment was refunded "
+            "automatically when Telegram allowed it.",
+            video_prompt_keyboard(),
+        )
+        context.user_data.pop(VIDEO_PENDING_PAYMENT_KEY, None)
         return True
 
     if not store.record_payment(
@@ -458,9 +490,11 @@ async def video_successful_payment_handler(
         uploader=cache.get("uploader"),
         photo_urls=tuple(cache.get("photo_urls") or ()),
     )
-    if message:
-        await message.reply_text(
-            "✅ Payment received. Your HD direct stream is ready.",
-            reply_markup=media_result_with_hd_link_keyboard(metadata),
-        )
+    await _edit_saved_prompt(
+        update,
+        context,
+        "✅ Payment received. Your HD direct stream is ready.",
+        media_result_with_hd_link_keyboard(metadata),
+    )
+    context.user_data.pop(VIDEO_PENDING_PAYMENT_KEY, None)
     return True

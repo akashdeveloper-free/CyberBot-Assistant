@@ -15,10 +15,14 @@ without turning `main.py` into a monolith.
 - Telegram Stars invoices using `currency="XTR"` and an empty `provider_token`.
 - Pre-checkout validation with `PreCheckoutQueryHandler`.
 - Successful payment handling with duplicate-charge protection.
-- Dynamic Media Downloader menu for TikTok video/photo links and supported public URLs.
-- Direct SD links for unlimited free normal downloads; Render never stores or proxies
-  media bytes.
-- Five free HD unlocks per user per local day, followed by a one-Star Telegram invoice.
+- Unified Video Downloader menu for TikTok, YouTube, Facebook, Instagram, and public
+  media links.
+- yt-dlp handles metadata, thumbnails, normal streams, and explicit HD preparation;
+  no RapidAPI key rotation or multi-key quota burning is used.
+- Direct normal/HD stream links are exposed through Telegram inline buttons; Render never
+  stores or proxies media bytes.
+- Five free explicit HD unlocks per user per local day, followed by a one-Star Telegram
+  invoice.
 - MongoDB Atlas cache with a 36-hour TTL index for normalized metadata and direct URLs.
 - Payment safety checks that prepare the HD URL before invoicing and refund when delivery
   cannot be completed after a successful payment.
@@ -61,9 +65,6 @@ Required for the downloader:
 - `TELEGRAM_BOT_TOKEN` — Telegram BotFather token.
 - `MONGODB_URI` — MongoDB Atlas connection string used for the cache, quota, and paid
   unlock records.
-- `API_KEYS` — comma-separated API keys if another configured module needs them. yt-dlp
-  itself does not require an API key.
-
 Optional variables:
 
 - `DATABASE_PATH` — SQLite path; defaults to `database/cyberbot.sqlite3`.
